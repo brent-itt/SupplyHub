@@ -23,7 +23,7 @@ The first visit to a protected page opens `/setup` when the public Supabase sett
 
 ## Deploy to Vercel
 
-The Vercel project is `brent-itts-projects/supalies`, with production URL https://supalies.vercel.app.
+The Vercel project is `brent-itts-projects/supalies`, with production URL https://supplyhub-pu.vercel.app.
 
 Vercel detects Next.js automatically and uses `npm run build`. Configure these variables for the Production environment in the Vercel project settings:
 
@@ -32,9 +32,9 @@ Vercel detects Next.js automatically and uses `npm run build`. Configure these v
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Your Supabase publishable key |
 | `SUPABASE_SECRET_KEY` | Your server-only Supabase secret key; `SUPABASE_SERVICE_ROLE_KEY` is also supported |
-| `NEXT_PUBLIC_SITE_URL` | `https://supalies.vercel.app` |
+| `NEXT_PUBLIC_SITE_URL` | `https://supplyhub-pu.vercel.app` |
 
-In Supabase **Authentication > URL Configuration**, set **Site URL** to `https://supalies.vercel.app` and add `https://supalies.vercel.app/auth/callback?next=%2Freset-password` to **Redirect URLs** for password recovery. Keep any localhost redirect needed for local development.
+In Supabase **Authentication > URL Configuration**, set **Site URL** to `https://supplyhub-pu.vercel.app` and add `https://supplyhub-pu.vercel.app/auth/callback?next=%2Freset-password` to **Redirect URLs** for password recovery. Keep any localhost redirect needed for local development.
 
 To deploy updates from this folder:
 
