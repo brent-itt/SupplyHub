@@ -1,6 +1,4 @@
-import Image from "next/image";
 import Link from "next/link";
-import QRCode from "qrcode";
 import { notFound } from "next/navigation";
 import { archiveItemAction, recordMovementAction, saveItemAction, setPublicVisibilityAction } from "@/app/actions";
 import { ArchiveItemForm } from "@/components/system/archive-form";
@@ -9,7 +7,7 @@ import { PrintButton } from "@/components/system/print-button";
 import { PageHeading, StockBadge } from "@/components/system/ui";
 import { formatDate, formatNumber, movementLabels } from "@/lib/format";
 import { requireProfile } from "@/lib/auth";
-import { buildItemCode } from "@/lib/qr";
+import { BarcodeLabel } from "@/components/system/barcode-label";
 import { isManager, type InventoryTransaction, type Item, type Profile } from "@/lib/types";
 
 export default async function InventoryItemPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -17,12 +15,11 @@ export default async function InventoryItemPage({ params, searchParams }: { para
   const { supabase, profile } = await requireProfile(undefined, `/inventory/${id}`);
   const manager = isManager(profile.role);
   const canRecordStock = manager;
-  const [itemResult, historyResult, qr] = await Promise.all([
+  const [itemResult, historyResult] = await Promise.all([
     supabase.from("items").select("*").eq("id", id).maybeSingle(),
     manager
       ? supabase.from("transactions").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100)
       : Promise.resolve({ data: [], error: null }),
-    QRCode.toDataURL(buildItemCode(id), { width: 360, margin: 1, errorCorrectionLevel: "M" }),
   ]);
   if (itemResult.error) throw new Error("Unable to load the supply record.");
   if (!itemResult.data) notFound();
@@ -41,7 +38,7 @@ export default async function InventoryItemPage({ params, searchParams }: { para
 
   const movementQuery = query.movement === "stock_out" || query.movement === "stock_in" || query.movement === "adjustment" ? query.movement : undefined;
   return <>
-    <PageHeading eyebrow="INVENTORY" title={item.name} description={`${item.sku} · ${item.category}`} actions={<><Link className="sys-button sys-button-secondary" href="/inventory">Back to inventory</Link>{canRecordStock && !item.is_archived && <Link className="sys-button sys-button-secondary" href="/scan">Scan a QR label</Link>}</>}/>
+    <PageHeading eyebrow="INVENTORY" title={item.name} description={`${item.sku} · ${item.category}`} actions={<><Link className="sys-button sys-button-secondary" href="/inventory">Back to inventory</Link>{!item.is_archived && <Link className="sys-button sys-button-secondary" href="/scan">Barcode stock out</Link>}</>}/>
     {item.is_archived && <div className="sys-notice"><p>This supply is archived. It remains available in historical records, but cannot receive new stock movements or requisitions.</p></div>}
     <div className="sys-grid-2">
       <section className="sys-card">
@@ -54,14 +51,14 @@ export default async function InventoryItemPage({ params, searchParams }: { para
           {item.description && <div><dt>Description</dt><dd>{item.description}</dd></div>}
         </dl>
       </section>
-      <section className="sys-qr-label">
-        <div className="sys-card-header sys-no-print"><div><h2>Item QR label</h2><p>Scan to open this supply in the portal</p></div><PrintButton label="Print label"/></div>
-        <Image src={qr} width={240} height={240} alt={`QR code for ${item.name}`} unoptimized/>
+      <section className="sys-barcode-label">
+        <div className="sys-card-header sys-no-print"><div><h2>Item barcode label</h2><p>Scan to add this supply to a stock-out cart</p></div><PrintButton label="Print label"/></div>
+        <BarcodeLabel code={item.sku} name={item.name}/>
         <h2>{item.name}</h2><p>{item.sku}</p>
-        <p className="sys-no-print">This code identifies the item only. Sign-in and role permissions still apply.</p>
+        <p className="sys-no-print">Code 128 · Uses the item stock code. Reprint the label if the stock code changes.</p>
       </section>
     </div>
-    {manager ? <nav aria-label="Edit this supply" className="sys-form-actions" style={{ marginTop: 22 }}><a className="sys-button" href="#item-information">Edit item information</a>{!item.is_archived && <a className="sys-button sys-button-secondary" href="#stock-movement">Update stock quantity</a>}</nav> : <p className="sys-notice" style={{ marginTop: 22 }}>Only an Admin or Super Admin can edit stock quantities and item information.</p>}
+    {manager ? <nav aria-label="Edit this supply" className="sys-form-actions" style={{ marginTop: 22 }}><a className="sys-button" href="#item-information">Edit item information</a>{!item.is_archived && <a className="sys-button sys-button-secondary" href="#stock-movement">Update stock quantity</a>}</nav> : <p className="sys-notice" style={{ marginTop: 22 }}>Staff can issue supplies through Barcode stock out. Receiving stock, correcting stock counts, and editing item information require an Admin or Super Admin.</p>}
     {canRecordStock && !item.is_archived && <section id="stock-movement" className="sys-card" style={{ marginTop: 22, scrollMarginTop: 24 }}><h2>Update stock quantity</h2><p className="sys-muted">To correct the stock count, choose Adjustment and enter the new total quantity with a reason.</p><MovementForm key={`${item.id}:${movementQuery || "stock_in"}`} action={recordMovementAction} item={item} initialKind={movementQuery}/>{manager && <p style={{ marginTop: 18 }}><a className="sys-link" href="#item-information">Edit item information: name, category, unit, location, and description</a></p>}</section>}
     {manager && <section className="sys-stack" style={{ marginTop: 22 }}>
       <div className="sys-stack">

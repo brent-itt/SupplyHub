@@ -43,8 +43,13 @@ export interface InventoryTransaction {
 
 export interface Requisition {
   id: string;
+  version: number;
   item_id: string;
   requester_id: string;
+  requester_name: string;
+  request_date: string;
+  item_name: string;
+  item_code: string;
   quantity: number;
   purpose: string;
   status: RequestStatus;
@@ -52,6 +57,17 @@ export interface Requisition {
   review_note: string | null;
   created_at: string;
   reviewed_at: string | null;
+}
+
+export interface RequisitionLog {
+  id: string;
+  request_id: string;
+  actor_id: string | null;
+  actor_name: string;
+  event: "submitted" | "edited" | "approved" | "rejected" | "cancelled";
+  before_data: Partial<Requisition> | null;
+  after_data: Partial<Requisition>;
+  created_at: string;
 }
 
 export type ActionResult = { error?: string; success?: string };

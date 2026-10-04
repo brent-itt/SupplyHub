@@ -221,6 +221,14 @@ p {
   width: 24px;
   height: 24px;
 }
+.student-form-entry { background: #f0f5ec; border-block: 1px solid #dfe8d9; }
+.student-form-entry-inner { max-width: 1280px; margin: auto; padding: 30px 64px; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+.student-form-entry-inner > div:first-child { max-width: 680px; }
+.student-form-entry h2 { font-size: 22px; font-weight: 600; line-height: 1.4; margin: 5px 0 9px; }
+.student-form-entry h2 + p { color: var(--text); font-size: 13px; line-height: 1.8; }
+.student-form-entry-action { display: flex; flex-direction: column; align-items: center; gap: 9px; flex-shrink: 0; }
+.student-form-entry-action .stocks-button { margin: 0; min-width: 0; font-size: 15px; white-space: nowrap; }
+.student-form-entry-action > span { font-size: 11px; color: #64775a; }
 .desktop-surface {
   position: absolute;
   z-index: -1;
@@ -677,6 +685,8 @@ p {
   }
 }
 @media (max-width: 1000px) {
+  .student-form-entry-inner { padding-inline: 35px; gap: 24px; }
+  .student-form-entry h2 { font-size: 20px; }
   .header-inner {
     padding-inline: 35px;
   }
@@ -727,6 +737,7 @@ p {
   }
 }
 @media (max-width: 900px) {
+  .student-form-entry-inner { padding: 28px; flex-direction: column; align-items: flex-start; gap: 20px; }
   .public-stock-section {
     padding: 58px 28px 68px;
   }
@@ -741,7 +752,7 @@ p {
   }
   .site-header nav {
     margin: 0;
-    gap: 23px;
+    gap: 16px;
   }
   .nav-link {
     font-size: 12px;
@@ -818,7 +829,15 @@ p {
     height: 62px;
   }
 }
+@media (max-width: 700px) {
+  .site-header { height: auto; }
+  .header-inner { padding: 10px 20px; flex-direction: column; gap: 6px; }
+  .site-header nav { flex-wrap: wrap; justify-content: center; gap: 4px 18px; }
+}
 @media (max-width: 520px) {
+  .student-form-entry-inner { padding: 26px 23px; }
+  .student-form-entry-action { width: 100%; }
+  .student-form-entry-action .stocks-button { width: 100%; }
   .public-stock-section {
     padding: 48px 20px 58px;
   }
@@ -841,7 +860,9 @@ p {
     width: 223px;
   }
   .site-header nav {
-    gap: 38px;
+    gap: 4px 18px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .nav-link {
     font-size: 12px;

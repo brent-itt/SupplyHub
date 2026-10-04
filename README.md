@@ -1,6 +1,6 @@
 # SupplyHub
 
-SupplyHub is a supplies portal for Panpacific University and the Supplies Office. Visitors can view selected public stock. Staff can view supplies, scan QR labels, and submit requisitions. Admins manage inventory, approvals, and reports. Super Admins also manage user access.
+SupplyHub is a supplies portal for Panpacific University and the Supplies Office. Visitors can view selected public stock. Staff can view supplies, scan barcodes, and submit requisitions. Admins manage inventory, approvals, and reports. Super Admins also manage user access.
 
 ## Run locally
 
@@ -46,21 +46,24 @@ On a new machine, run `vercel login` and `vercel link --project supalies --scope
 
 ## Features
 
+- Public student stock-out form at `/form`, with a printable QR poster under **Student stock-out log**. Name, date, receipt number, item, and quantity are sent to a private log shared by Staff and Admin; staff confirms before inventory is reduced. Requires `202610040005_student_stock_out_logs.sql` and the existing server-only Supabase key (see [database setup](supabase/README.md)).
+
 - Email and password sign-in, password reset, and pending account approval.
 - Public home-page stock list curated by Admins and Super Admins.
 - Role-based access for Super Admin, Admin, and Staff.
 - Supply search and stock availability for signed-in staff.
-- Supply creation, editing, archiving, restoration, and reports for managers; stock movements for Admins and Super Admins.
-- Staff requisitions with manager approval and automatic audited stock deduction.
-- Item QR labels and camera or manual-code scanning to open the corresponding inventory item.
+- Supply creation, editing, archiving, restoration, reports, stock receiving, and count adjustments for managers; stock out for Staff, Admins, and Super Admins.
+- School staff requisitions with requestor name, date, and an item code filled from the selected item name. Managers review requisitions before issuing stock. Direct staff stock out does not require a requisition.
+- Staff can edit their own pending requisitions; admins can edit any pending requisition. Admins can view a protected activity log with actor, time, and before/after values. Apply `supabase/migrations/202610040003_requisition_edits_and_logs.sql` after the earlier requisition migration.
+- Printable Code 128 labels and a POS-style stock-out cart with USB scanner, camera, and manual barcode input. Staff and admins confirm checkout to deduct stock automatically and update reports. Existing databases must apply `supabase/migrations/202610040001_staff_stock_out.sql` to enable Staff stock out.
 - Current stock and transaction reports with CSV export and print layout.
 - PostgreSQL row-level security and protected database functions for every write.
 
 ## Project files
 
-- `src/app/(system)`: authenticated dashboard, inventory, requisitions, reports, QR scanner, account, and access pages.
+- `src/app/(system)`: authenticated dashboard, inventory, requisitions, reports, barcode stock out, account, and access pages.
 - `src/app/actions.ts`: validated server actions for authentication and data changes.
-- `src/lib`: auth, validation, QR, formatting, and Supabase helpers.
+- `src/lib`: auth, validation, barcode, formatting, and Supabase helpers.
 - `src/components/system`: shared dashboard and form components.
 - `supabase/migrations`: database schema, row-level policies, and stock transaction functions.
 - `pic`: supplied university logo, campus photo, and landing-page illustrations.
@@ -71,4 +74,8 @@ On a new machine, run `vercel login` and `vercel link --project supalies --scope
 npm run lint
 npm run typecheck
 npm run build
+npx tsx --test tests/barcode.test.ts tests/stock-out.test.ts
+npx tsx --test tests/requisitions.test.ts
+npx tsx --test tests/requisition-logs.test.ts
+node --test tests/stock-edit-access.test.mjs
 ```

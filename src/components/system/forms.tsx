@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useRef, useState, type ReactNode } from "react";
-import { roleLabels, type ActionResult, type FormAction, type Item, type MovementKind, type Profile, type Role } from "@/lib/types";
+import { roleLabels, type ActionResult, type FormAction, type Item, type MovementKind, type Profile, type Requisition, type Role } from "@/lib/types";
 import { ActionForm } from "./action-form";
+import { matchingSupplyNames } from "@/lib/requisitions";
 
 function Field({ label, children, hint, wide = false }: { label: string; children: ReactNode; hint?: string; wide?: boolean }) {
   return <label className={`sys-field${wide ? " sys-field-wide" : ""}`}><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
@@ -17,7 +18,7 @@ export function ItemForm({ action, item }: { action: FormAction; item?: Item }) 
     {item && <input type="hidden" name="item_id" value={item.id}/>}
     <div className="sys-form-grid">
       <Field label="Supply name" wide><input className="sys-input" name="name" required maxLength={160} defaultValue={item?.name} placeholder="e.g. Scantron answer sheets"/></Field>
-      <Field label="Item code (SKU)" hint="Use a unique code for this supply."><input className="sys-input" name="sku" required maxLength={80} defaultValue={item?.sku} placeholder="e.g. SCAN-001"/></Field>
+      <Field label="Barcode / stock code (SKU)" hint="Use a unique code, or scan a product barcode here. Printed labels use this value; reprint them if it changes."><input className="sys-input" name="sku" required maxLength={80} defaultValue={item?.sku} placeholder="e.g. SUP-001 or 4801234567890"/></Field>
       <Field label="Category"><input className="sys-input" name="category" required maxLength={80} defaultValue={item?.category || "General supplies"} list="supply-categories"/><datalist id="supply-categories"><option value="General supplies"/><option value="Office supplies"/><option value="Paper products"/><option value="Scantron"/><option value="Cleaning supplies"/><option value="Equipment"/></datalist></Field>
       <Field label="Unit" hint="The unit used for counting stock."><input className="sys-input" name="unit" required maxLength={40} defaultValue={item?.unit || "piece"} placeholder="piece, box, ream"/></Field>
       <Field label="Storage location"><input className="sys-input" name="location" maxLength={160} defaultValue={item?.location} placeholder="e.g. Supplies office, shelf A"/></Field>
@@ -54,21 +55,45 @@ export function MovementForm({ action, item, initialKind = "stock_in" }: { actio
   </ActionForm>;
 }
 
-export function RequestForm({ action, items, itemId }: { action: FormAction; items: Item[]; itemId?: string }) {
+export function RequestForm({ action, items, itemId, requesterName, defaultDate, request }: { action: FormAction; items: Item[]; itemId?: string; requesterName: string; defaultDate: string; request?: Requisition }) {
   const availableItems = items.filter((item) => !item.is_archived);
-  return <ActionForm action={action} submitLabel="Submit requisition" pendingLabel="Submitting…" disabled={!availableItems.length}>
-    <Field label="Supply item"><select className="sys-select" name="item_id" required defaultValue={itemId || ""}><option value="" disabled>Select a supply item</option>{availableItems.map((item) => <option value={item.id} key={item.id}>{item.name} · {item.sku} ({item.quantity} {item.unit} available)</option>)}</select></Field>
-    <Field label="Quantity requested"><input className="sys-input" type="number" name="quantity" required min={1} max={1000000000} step={1}/></Field>
-    <Field label="Purpose" hint="Include the department, class, or activity needing these supplies."><textarea className="sys-input" name="purpose" required minLength={3} maxLength={2000} rows={4} placeholder="Describe what these supplies will be used for"/></Field>
-    <p className="sys-form-hint">The Supplies Office will review your request. Stock is issued when your request is approved.</p>
+  const initialItem = availableItems.find(item => item.id === (request?.item_id ?? itemId));
+  const [itemName, setItemName] = useState(initialItem?.name ?? "");
+  const [choiceId, setChoiceId] = useState(initialItem?.id ?? "");
+  const namesId = useId();
+  const matches = matchingSupplyNames(availableItems, itemName);
+  const selectedItem = matches.length === 1 ? matches[0] : matches.find(item => item.id === choiceId);
+  async function submitRequest(previous: ActionResult, data: FormData) {
+    if (!selectedItem) return { error: "Choose an existing supply by name. If names match, select its item code." };
+    const result = await action(previous, data);
+    if (result.success && !request) { setItemName(""); setChoiceId(""); }
+    return result;
+  }
+  return <ActionForm action={submitRequest} submitLabel={request ? "Save changes" : "Submit requisition"} pendingLabel={request ? "Saving changes…" : "Submitting…"} disabled={!availableItems.length}>
+    {request && <><input type="hidden" name="request_id" value={request.id}/><input type="hidden" name="expected_version" value={request.version}/></>}
+    <input type="hidden" name="item_id" value={selectedItem?.id ?? ""}/>
+    <div className="sys-form-grid">
+      <Field label="Name of requestor" hint="Name of the school staff member who needs these supplies."><input className="sys-input" name="requester_name" autoComplete="name" required minLength={2} maxLength={160} defaultValue={requesterName} placeholder="Enter the school staff member's full name"/></Field>
+      <Field label="Date"><input className="sys-input" type="date" name="request_date" required defaultValue={defaultDate}/></Field>
+      <Field label="Item name" hint="Type or choose an existing supply name." wide><input className="sys-input" name="item_name" list={namesId} required maxLength={160} value={itemName} onChange={event => { setItemName(event.target.value); setChoiceId(""); }} placeholder="Start typing an item name" autoComplete="off"/><datalist id={namesId}>{[...new Set(availableItems.map(item => item.name))].map(name => <option key={name} value={name}/>)}</datalist></Field>
+      {matches.length > 1 && <Field label="Choose the matching supply" hint="These supplies share a name. Select the correct code." wide><select className="sys-select" required value={choiceId} onChange={event => setChoiceId(event.target.value)}><option value="">Choose an item code</option>{matches.map(item => <option key={item.id} value={item.id}>{item.sku} · {item.unit} · {item.location || item.category}</option>)}</select></Field>}
+      <Field label="Item code" hint="Filled automatically from the selected item name."><input className="sys-input" name="item_code" readOnly value={selectedItem?.sku ?? ""} placeholder="Select an item name first"/></Field>
+      <Field label="Quantity requested"><input className="sys-input" type="number" name="quantity" required min={1} max={2147483647} step={1} defaultValue={request?.quantity}/></Field>
+    </div>
+    {itemName && !selectedItem && <p className="sys-form-hint" role="status">{matches.length > 1 ? "Choose the matching supply above to fill its code." : "Choose a matching name from the supply list to fill its code."}</p>}
+    {selectedItem && <p className="sys-form-hint" role="status">{selectedItem.quantity} {selectedItem.unit} currently available.</p>}
+    <Field label="Purpose" hint="Include the department, class, or activity needing these supplies."><textarea className="sys-input" name="purpose" required minLength={3} maxLength={2000} rows={4} defaultValue={request?.purpose} placeholder="Describe what these supplies will be used for"/></Field>
+    {request && <p className="sys-form-hint">Only pending requests can be edited. Changes are recorded in the admin activity log.</p>}
+    <p className="sys-form-hint">Requisitions are for school staff. The Supplies Office reviews them before issuing stock. For a direct stock out, use Barcode stock out; no requisition is needed.</p>
     {!availableItems.length && <p className="sys-notice">No supply items are available for requests yet.</p>}
   </ActionForm>;
 }
 
-export function ReviewForm({ action, requestId }: { action: FormAction; requestId: string }) {
+export function ReviewForm({ action, requestId, version }: { action: FormAction; requestId: string; version: number }) {
   const [decision, setDecision] = useState("approved");
   return <ActionForm action={action} submitLabel={decision === "approved" ? "Approve and issue stock" : "Reject requisition"} pendingLabel="Updating requisition…" confirmMessage={decision === "approved" ? "Approve this requisition and deduct the requested quantity from stock?" : "Reject this requisition?"}>
     <input type="hidden" name="request_id" value={requestId}/>
+    <input type="hidden" name="expected_version" value={version}/>
     <Field label="Decision"><select className="sys-select" name="decision" value={decision} onChange={(event) => setDecision(event.target.value)}><option value="approved">Approve and issue stock</option><option value="rejected">Reject request</option></select></Field>
     <Field label="Review note"><textarea className="sys-input" name="review_note" maxLength={2000} rows={3} placeholder="Add instructions or explain the decision"/></Field>
   </ActionForm>;

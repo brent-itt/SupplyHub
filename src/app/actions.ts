@@ -10,6 +10,7 @@ import { getSupabaseConfig } from "@/lib/supabase/config";
 import {
   accessSchema,
   accountSchema,
+  editRequestSchema,
   itemSchema,
   movementSchema,
   passwordSchema,
@@ -122,7 +123,8 @@ export async function saveItemAction(_previous: ActionResult, data: FormData): P
 export async function recordMovementAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
   const parsed = movementSchema.safeParse(formObject(data));
   if (!parsed.success) return { error: validationMessage(parsed.error) };
-  const result = await authorizedAction(["admin", "super_admin"], async (supabase) => {
+  const roles: Role[] = parsed.data.kind === "stock_out" ? ["staff", "admin", "super_admin"] : ["admin", "super_admin"];
+  const result = await authorizedAction(roles, async (supabase) => {
     const { item_id, kind, quantity, note, reference, idempotency_key } = parsed.data;
     const { error } = await supabase.rpc("stock_movement", {
       p_item_id: item_id,
@@ -184,11 +186,13 @@ export async function archiveItemAction(_previous: ActionResult, data: FormData)
 export async function createRequisitionAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
   const parsed = requestSchema.safeParse(formObject(data));
   if (!parsed.success) return { error: validationMessage(parsed.error) };
-  const result = await authorizedAction(["staff", "admin", "super_admin"], async (supabase) => {
+  const result = await authorizedAction(["staff"], async (supabase) => {
     const { error } = await supabase.rpc("create_requisition", {
       p_item_id: parsed.data.item_id,
       p_quantity: parsed.data.quantity,
       p_purpose: parsed.data.purpose,
+      p_requester_name: parsed.data.requester_name,
+      p_request_date: parsed.data.request_date,
     });
     if (error) throw new Error(error.message);
     return "Requisition submitted for review.";
@@ -196,6 +200,26 @@ export async function createRequisitionAction(_previous: ActionResult, data: For
   if (result.success) {
     revalidatePath("/dashboard");
     revalidatePath("/requisitions");
+  }
+  return result;
+}
+
+export async function updateRequisitionAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
+  const parsed = editRequestSchema.safeParse(formObject(data));
+  if (!parsed.success) return { error: validationMessage(parsed.error) };
+  const result = await authorizedAction(["staff", "admin", "super_admin"], async (supabase) => {
+    const { request_id, item_id, quantity, purpose, requester_name, request_date, expected_version } = parsed.data;
+    const { error } = await supabase.rpc("update_requisition", {
+      p_request_id: request_id, p_item_id: item_id, p_quantity: quantity, p_purpose: purpose,
+      p_requester_name: requester_name, p_request_date: request_date, p_expected_version: expected_version,
+    });
+    if (error) throw new Error(error.message);
+    return "Requisition updated.";
+  });
+  if (result.success) {
+    revalidatePath("/dashboard");
+    revalidatePath("/requisitions");
+    redirect("/requisitions?notice=updated");
   }
   return result;
 }
@@ -208,6 +232,7 @@ export async function reviewRequisitionAction(_previous: ActionResult, data: For
       p_request_id: parsed.data.request_id,
       p_decision: parsed.data.decision,
       p_note: parsed.data.review_note,
+      p_expected_version: parsed.data.expected_version,
     });
     if (error) throw new Error(error.message);
     return parsed.data.decision === "approved" ? "Requisition approved and stock issued." : "Requisition rejected.";

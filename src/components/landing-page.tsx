@@ -146,6 +146,7 @@ export default function LandingPage({ stocks }: { stocks: PublicStock[] }) {
             <button className="nav-link" onClick={() => openDialog("About")}>
               About
             </button>
+            <Link className="nav-link" href="/form">Student form</Link>
             <Link className="nav-link" href="/login">Staff sign in</Link>
           </nav>
         </div>
@@ -189,6 +190,19 @@ export default function LandingPage({ stocks }: { stocks: PublicStock[] }) {
             <SupplyScene />
           </div>
           <div className="desktop-surface" />
+        </section>
+        <section className="student-form-entry" aria-labelledby="student-form-entry-title">
+          <div className="student-form-entry-inner">
+            <div>
+              <p className="public-stock-eyebrow">FOR STUDENTS</p>
+              <h2 id="student-form-entry-title">Collecting supplies? Fill out your stock-out form.</h2>
+              <p>Enter your name, date, receipt number, item, and quantity. Your submission goes to the Supplies Office for staff confirmation.</p>
+            </div>
+            <div className="student-form-entry-action">
+              <Link className="stocks-button" href="/form">Fill out student form <span aria-hidden="true">→</span></Link>
+              <span>No sign-in needed</span>
+            </div>
+          </div>
         </section>
         <section
           className="features-section"

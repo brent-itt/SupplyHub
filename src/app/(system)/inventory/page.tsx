@@ -35,7 +35,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   if (archived) queryForLinks.archived = "true";
 
   return <>
-    <PageHeading eyebrow="SUPPLIES OFFICE" title={archived ? "Archived supplies" : "Inventory"} description="Search supplies, review stock levels, and open an item to view or manage its record." actions={<>{isManager(profile.role) && <Link className="sys-button" href="/inventory/new">Add supply item</Link>}{isManager(profile.role) && <Link className="sys-button sys-button-secondary" href={archived ? "/inventory" : "/inventory?archived=true"}>{archived ? "Active inventory" : "Archived supplies"}</Link>}</>}/>
+    <PageHeading eyebrow="SUPPLIES OFFICE" title={archived ? "Archived supplies" : "Inventory"} description="Search supplies, review stock levels, and open an item to view or manage its record." actions={<>{!archived && <Link className="sys-button sys-button-secondary" href="/scan">Stock out supplies</Link>}{isManager(profile.role) && <Link className="sys-button" href="/inventory/new">Add supply item</Link>}{isManager(profile.role) && <Link className="sys-button sys-button-secondary" href={archived ? "/inventory" : "/inventory?archived=true"}>{archived ? "Active inventory" : "Archived supplies"}</Link>}</>}/>
     <section className="sys-card sys-card-flush" aria-label="Supply items">
       <div className="sys-card-header"><div><h2>{count ?? items.length} {archived ? "archived" : "available"} supply records</h2><p>Stock quantities update when a transaction is recorded.</p></div></div>
       <form className="sys-toolbar" method="get">

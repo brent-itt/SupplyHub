@@ -19,7 +19,8 @@ export function SystemNavigation({ role }: { role: Role }) {
     { href: "/inventory", label: "Inventory", icon: "inventory" },
   ];
   links.push({ href: "/requisitions", label: "Requisitions", icon: "requests" });
-  if (role === "staff" || isManager(role)) links.push({ href: "/scan", label: "Scan QR code", icon: "scan" });
+  links.push({ href: "/student-logs", label: "Student stock-out log", icon: "requests" });
+  if (role === "staff" || isManager(role)) links.push({ href: "/scan", label: "Barcode stock out", icon: "scan" });
   if (isManager(role)) links.push({ href: "/reports", label: "Reports", icon: "reports" });
   links.push({ href: "/account", label: "My account", icon: "lock" });
   if (role === "super_admin") links.push({ href: "/users", label: "User access", icon: "users" });

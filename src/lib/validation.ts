@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { requisitionDateSchema } from "./requisitions";
 
 export const uuid = z.string().uuid("Choose a valid record.");
 export const roleSchema = z.enum(["super_admin", "admin", "staff"]);
@@ -29,14 +30,21 @@ export const movementSchema = z.object({
   if (value.kind === "adjustment" && !value.note) context.addIssue({ code: "custom", path: ["note"], message: "Explain why the stock count is being corrected." });
 });
 
-export const requestSchema = z.object({ item_id: uuid, quantity: positiveInteger, purpose: text(2000).min(3, "Describe what the supplies are needed for.") });
-export const reviewSchema = z.object({ request_id: uuid, decision: z.enum(["approved", "rejected"]), review_note: text(2000) });
+export const requestSchema = z.object({
+  item_id: uuid,
+  quantity: positiveInteger,
+  purpose: text(2000).min(3, "Describe what the supplies are needed for."),
+  requester_name: text(160).min(2, "Enter the school staff requestor's name."),
+  request_date: requisitionDateSchema,
+});
+export const editRequestSchema = requestSchema.extend({ request_id: uuid, expected_version: positiveInteger });
+export const reviewSchema = z.object({ request_id: uuid, expected_version: positiveInteger, decision: z.enum(["approved", "rejected"]), review_note: text(2000) });
 export const accessSchema = z.object({ user_id: uuid, role: roleSchema, is_active: z.enum(["true", "false"]).transform(value => value === "true") });
 export const passwordSchema = z.string().min(12, "Use at least 12 characters.").max(128);
 export const accountSchema = z.object({ email: z.string().trim().email().max(254), full_name: text(160).min(2), password: passwordSchema, role: roleSchema });
 
 export function safeNext(value: unknown, fallback = "/dashboard") {
-  if (typeof value !== "string" || !/^\/(?:dashboard|inventory|requisitions|reports|scan|users|account)(?:[/?]|$)/.test(value) || /[\\\r\n]/.test(value)) return fallback;
+  if (typeof value !== "string" || !/^\/(?:dashboard|inventory|requisitions|student-logs|reports|scan|users|account)(?:[/?]|$)/.test(value) || /[\\\r\n]/.test(value)) return fallback;
   return value;
 }
 
