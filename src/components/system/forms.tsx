@@ -122,9 +122,11 @@ export function CreateAccountForm({ action }: { action: FormAction }) {
 }
 
 export function PublicVisibilityForm({ action, item }: { action: FormAction; item: Item }) {
-  return <ActionForm action={action} submitLabel={item.show_on_landing ? "Remove from public list" : "Show on public list"} pendingLabel="Saving…">
+  return <ActionForm action={action} submitLabel="Save public display" pendingLabel="Saving…">
     <input type="hidden" name="item_id" value={item.id}/>
-    <input type="hidden" name="show_on_landing" value={String(!item.show_on_landing)}/>
-    <p className="sys-form-hint">{item.show_on_landing ? "This item appears on the public home page while it is active." : "Only selected items appear on the public home page."}</p>
+    <Field label="Public visibility"><select className="sys-select" name="show_on_landing" defaultValue={String(item.show_on_landing)}><option value="false">Hidden from public list</option><option value="true">Show on public list</option></select></Field>
+    <Field label={`Displayed quantity (${item.unit})`} hint="Choose the maximum quantity visitors see. If actual stock falls below this amount, the lower stock count is shown. This does not change inventory."><input className="sys-input" name="public_quantity" type="number" required min={0} max={2147483647} step={1} defaultValue={item.public_quantity ?? 0}/></Field>
+    <p className="sys-form-hint">Actual stock: {item.quantity} {item.unit}. Set the displayed quantity to 0 to show this item as out of stock.</p>
+    {item.is_archived && <p className="sys-form-hint">Archived supplies remain hidden until restored.</p>}
   </ActionForm>;
 }

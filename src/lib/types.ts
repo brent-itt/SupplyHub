@@ -23,6 +23,7 @@ export interface Item {
   low_stock_threshold: number;
   is_archived: boolean;
   show_on_landing: boolean;
+  public_quantity: number;
   created_at: string;
   updated_at: string;
 }

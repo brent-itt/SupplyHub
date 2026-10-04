@@ -20,6 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <h1>Welcome back</h1>
       <p>Sign in with an account authorized by the Panpacific University Supplies Office.</p>
       {query.notice === "auth_error" && <div className="sys-notice sys-notice-error" role="alert"><p>The sign-in link expired or could not be verified. Request a fresh link and try again.</p></div>}
+      {query.notice === "session_expired" && <div className="sys-notice" role="status"><p>Your session has expired. Please sign in again.</p></div>}
       <SignInForm action={signInAction} next={next}/>
       <p><Link className="sys-link" href="/forgot-password">Forgot your password?</Link></p>
     </main>

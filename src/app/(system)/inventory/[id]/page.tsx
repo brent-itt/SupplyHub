@@ -65,7 +65,7 @@ export default async function InventoryItemPage({ params, searchParams }: { para
         {item.is_archived && <div className="sys-card"><h2>Archived supply</h2><ArchiveItemForm action={archiveItemAction} itemId={item.id} archived={item.is_archived}/></div>}
         <div id="item-information" className="sys-card" style={{ scrollMarginTop: 24 }}><h2>Edit item information</h2><ItemForm action={saveItemAction} item={item}/></div>
       </div>
-      <div className="sys-card"><h2>Public stock list</h2><p className="sys-muted">Choose whether this item appears in the stock list on the public home page.</p><div style={{ marginTop: 15 }}><PublicVisibilityForm action={setPublicVisibilityAction} item={item}/></div></div>
+      <div className="sys-card"><h2>Public stock list</h2><p className="sys-muted">Choose whether this item appears on the home page and how much stock visitors see.</p><div style={{ marginTop: 15 }}><PublicVisibilityForm action={setPublicVisibilityAction} item={item}/></div></div>
       {!item.is_archived && <div className="sys-card"><h2>Archive supply</h2><p className="sys-muted">Archiving keeps the transaction history. Stock must be zero and pending requisitions must be resolved.</p><div style={{ marginTop: 15 }}><ArchiveItemForm action={archiveItemAction} itemId={item.id} archived={false}/></div></div>}
     </section>}
     {manager && <section className="sys-card sys-card-flush" style={{ marginTop: 22 }}>

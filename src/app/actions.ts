@@ -14,6 +14,7 @@ import {
   itemSchema,
   movementSchema,
   passwordSchema,
+  publicVisibilitySchema,
   requestSchema,
   reviewSchema,
   safeNext,
@@ -148,15 +149,16 @@ export async function recordMovementAction(_previous: ActionResult, data: FormDa
 }
 
 export async function setPublicVisibilityAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
-  const parsed = z.object({ item_id: uuid, show_on_landing: z.enum(["true", "false"]).transform((value) => value === "true") }).safeParse(formObject(data));
+  const parsed = publicVisibilitySchema.safeParse(formObject(data));
   if (!parsed.success) return { error: validationMessage(parsed.error) };
   const result = await authorizedAction(["admin", "super_admin"], async (supabase) => {
     const { error } = await supabase.rpc("set_item_public_visibility", {
       p_item_id: parsed.data.item_id,
       p_show_on_landing: parsed.data.show_on_landing,
+      p_public_quantity: parsed.data.public_quantity,
     });
     if (error) throw new Error(error.message);
-    return parsed.data.show_on_landing ? "Supply added to the public stock list." : "Supply removed from the public stock list.";
+    return parsed.data.show_on_landing ? "Public stock display saved." : "Supply hidden from the public stock list.";
   });
   if (result.success) {
     revalidatePath("/");

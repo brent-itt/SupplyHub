@@ -5,7 +5,7 @@
 3. In **Authentication > Providers > Email**, disable public sign-ups. Create authorized university accounts in **Authentication > Users > Add user**. If you use invitations, configure the app URL and redirect allow list in **Authentication > URL Configuration**. The application uses password sign-in, so each account needs a password.
 4. Edit the email in `bootstrap-first-admin.sql` and run that file in SQL Editor to activate the initial super admin. This bootstrap stops if an active super admin already exists.
 5. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in the app's `.env.local` and Vercel environment variables. A legacy anon key is also suitable as the public key if the project has not adopted publishable keys. Set `SUPABASE_SECRET_KEY` as a server-only environment variable for Super Admin account creation (existing deployments can use `SUPABASE_SERVICE_ROLE_KEY`). Never place either privileged key in a `NEXT_PUBLIC_*` variable.
-6. Sign in as the initial super admin. On **Users**, approve each account and assign Staff, Admin, or Super admin. Create supply records, then record initial stock through **Stock in** so the opening balance is included in history. On an item's detail page, select **Show on public list** to display it on the home page.
+6. Sign in as the initial super admin. On **Users**, approve each account and assign Staff, Admin, or Super admin. Create supply records, then record initial stock through **Stock in** so the opening balance is included in history. On an item's detail page, under **Public stock list**, choose **Show on public list**, enter the **Displayed quantity**, and select **Save public display**.
 
 Accounts are inactive by default. Only an active super admin can approve accounts and change roles. Auth metadata such as `role` or `is_active` is ignored. There are no production demo accounts, sample balances, or automatic elevated users.
 
@@ -43,11 +43,17 @@ All application mutations use these public functions:
 - `review_requisition(p_request_id, p_decision, p_note, p_expected_version)` accepts `approved` or `rejected`. Edits and reviews reject stale versions so a reviewer cannot issue an unseen edited quantity.
 - `cancel_requisition(p_request_id)` cancels the caller's pending request.
 - `set_user_access(p_user_id, p_role, p_is_active)` assigns access.
-- `set_item_public_visibility(p_item_id, p_show_on_landing)` controls whether an item appears on the public home page.
+- `set_item_public_visibility(p_item_id, p_show_on_landing, p_public_quantity)` controls visibility and the maximum quantity shown on the public home page, without changing actual inventory.
 
 Barcode labels encode the existing item SKU using Code 128. The barcode stock-out cart uses the protected `stock_movement` RPC for each line, retaining a unique idempotency key and a shared POS reference across retries. Lines are committed separately: the screen identifies any completed lines if a later line fails, and retrying does not issue confirmed stock twice. Active Staff, Admin, and Super Admin can confirm stock out after applying `migrations/202610040001_staff_stock_out.sql`. Staff cannot receive stock, adjust counts, edit supplies, or approve requisitions.
 
 ## Verification
+
+### Public display quantities
+
+Apply [`202610040007_public_display_quantity.sql`](migrations/202610040007_public_display_quantity.sql) before deploying the updated application. Admins can save a separate displayed quantity for each item under **Inventory > item > Public stock list**. The landing page uses `get_public_stock()` to return only selected, active items with the smaller of actual stock and the configured display limit. Zero displays as out of stock. Stock movements continue to use actual inventory. Anonymous callers can no longer read the actual `items.quantity` column directly.
+
+Existing items start with their current stock count as their display limit; new items default to zero and hidden. Adjust existing limits after migration. Rerunning this migration preserves saved limits. Run `npx tsx --test tests/public-stock.test.ts` to verify validation, permissions, hidden/archived filtering, stock changes, migration retry, and the separation of public and actual quantities.
 
 ### Student forms and stock-out logs
 

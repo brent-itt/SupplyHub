@@ -5,6 +5,11 @@ export const uuid = z.string().uuid("Choose a valid record.");
 export const roleSchema = z.enum(["super_admin", "admin", "staff"]);
 export const nonnegativeInteger = z.preprocess(value => typeof value === "string" && value.trim() !== "" ? Number(value) : value, z.number().int().min(0).max(2147483647));
 export const positiveInteger = nonnegativeInteger.refine(value => value > 0, "Enter a quantity greater than zero.");
+export const publicVisibilitySchema = z.object({
+  item_id: uuid,
+  show_on_landing: z.enum(["true", "false"]).transform(value => value === "true"),
+  public_quantity: nonnegativeInteger,
+});
 const text = (max: number) => z.string().trim().max(max);
 
 export const itemSchema = z.object({

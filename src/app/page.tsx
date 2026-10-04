@@ -12,12 +12,7 @@ export default async function Home() {
     const supabase = createClient(config.url, config.key, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
-    const { data, error } = await supabase
-      .from("items")
-      .select("id,name,category,unit,quantity,is_archived,show_on_landing")
-      .eq("show_on_landing", true)
-      .eq("is_archived", false)
-      .order("name");
+    const { data, error } = await supabase.rpc("get_public_stock");
     if (!error && data) stocks = data;
   }
 
