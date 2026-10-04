@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { StudentCheckoutLog } from "@/lib/student-stock-out";
 import { requireProfile } from "@/lib/auth";
 import { universityDate } from "@/lib/requisitions";
-import type { Item } from "@/lib/types";
+import type { StockOutItem } from "@/lib/types";
 
 export default async function ScanPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { supabase } = await requireProfile(["staff", "admin", "super_admin"], "/scan");
@@ -17,12 +17,12 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
     if (!result?.data || result.error) return <><ErrorNotice message="This student submission could not be loaded. Open it again from the student log."/><Link className="sys-button" href="/student-logs">Back to student logs</Link></>;
     studentLog = result.data;
   }
-  const items: Item[] = [];
+  const items: StockOutItem[] = [];
   // Supabase limits each response; page through the catalog so every barcode resolves.
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await supabase.from("items").select("*").eq("is_archived", false).order("id").range(from, from + 999);
+    const { data, error } = await supabase.from("items").select("id,name,sku,unit,quantity,category,low_stock_threshold").eq("is_archived", false).order("id").range(from, from + 999);
     if (error) throw new Error("Unable to load supplies for barcode checkout.");
-    items.push(...(data as Item[]));
+    items.push(...(data as StockOutItem[]));
     if (data.length < 1000) break;
   }
   return <>

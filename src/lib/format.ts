@@ -1,10 +1,12 @@
 import type { MovementKind } from "./types";
 
 export const movementLabels: Record<MovementKind, string> = { stock_in: "Stock in", stock_out: "Stock out", adjustment: "Count adjustment" };
+const dateFormatter = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" });
+const numberFormatter = new Intl.NumberFormat("en-PH");
 export function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" }).format(new Date(value));
+  return dateFormatter.format(new Date(value));
 }
-export function formatNumber(value: number) { return value.toLocaleString("en-PH"); }
+export function formatNumber(value: number) { return numberFormatter.format(value); }
 export function csvCell(value: unknown) {
   let text = String(value ?? "");
   // Prevent spreadsheet applications from treating a user-supplied cell as a formula.

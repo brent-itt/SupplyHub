@@ -1,3 +1,4 @@
+import Form from "next/form";
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { pageNumber, searchTerm } from "@/lib/validation";
@@ -23,11 +24,11 @@ export default async function StudentLogsPage({ searchParams }: { searchParams: 
   return <>
     <PageHeading eyebrow="SUPPLIES COUNTER" title="Student stock-out log" description="Review the receipt, then continue to Barcode stock out. Scan the requested item to complete issuance. This page refreshes every 30 seconds."
       actions={<><StudentLogRefresh/><Link className="sys-button" href="/student-logs/qr">Student form QR code</Link></>}/>
-    <form className="sys-filters sys-toolbar" method="get">
+    <Form className="sys-filters sys-toolbar" action="/student-logs">
       <label className="sys-field"><span>Search submissions</span><input className="sys-input" name="q" placeholder="Name, receipt number, or item" defaultValue={search}/></label>
       <label className="sys-field"><span>Status</span><select className="sys-select" name="status" defaultValue={status}><option value="pending">Pending</option><option value="issued">Issued</option><option value="rejected">Rejected</option><option value="all">All submissions</option></select></label>
       <button className="sys-button" type="submit">Apply filters</button><Link className="sys-link" href="/form" target="_blank">Open student form</Link>
-    </form>
+    </Form>
     {error ? <ErrorNotice message={error.code === "42P01" || error.code === "PGRST205" ? "Student logs need database setup. Apply 202610040005_student_stock_out_logs.sql in Supabase, then refresh this page." : "Unable to load student logs. Please refresh and try again."}/> : <section className="sys-card sys-card-flush">
       <div className="sys-card-header"><div><h2>{status === "pending" ? "Waiting for staff confirmation" : "Submission history"}</h2><p>{count ?? 0} matching submissions · newest first</p></div></div>
       {logs.length ? <div className="sys-table-wrap"><table className="sys-table"><thead><tr><th>Student / submitted</th><th>Receipt</th><th>Item</th><th>Status</th><th>Processing log</th></tr></thead><tbody>{logs.map(log => <tr key={log.id}>

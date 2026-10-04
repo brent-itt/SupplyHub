@@ -8,12 +8,12 @@ import { Icon } from "@/components/system/icons";
 import { normalizeBarcode } from "@/lib/barcode";
 import { checkoutSchema, type Checkout, type CheckoutResult } from "@/lib/stock-out";
 import { formatRequestDate, universityDate } from "@/lib/requisitions";
-import type { Item } from "@/lib/types";
+import type { StockOutItem } from "@/lib/types";
 import type { StudentCheckoutLog } from "@/lib/student-stock-out";
 
-type CartLine = { item: Item; quantity: number };
+type CartLine = { item: StockOutItem; quantity: number };
 
-export function StockOutPOS({ items, defaultDate, studentLog }: { items: Item[]; defaultDate: string; studentLog?: StudentCheckoutLog }) {
+export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOutItem[]; defaultDate: string; studentLog?: StudentCheckoutLog }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -45,7 +45,7 @@ export function StockOutPOS({ items, defaultDate, studentLog }: { items: Item[];
     setCart(lines);
   }
 
-  function addItem(item: Item) {
+  function addItem(item: StockOutItem) {
     if (locked || studentLog) return;
     const existing = cartRef.current.find(line => line.item.id === item.id);
     if ((existing?.quantity ?? 0) >= item.quantity) {

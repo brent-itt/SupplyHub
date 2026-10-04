@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { Item, RequestStatus } from "@/lib/types";
 import { Icon, type IconName } from "./icons";
 
@@ -30,4 +31,14 @@ export function StockBadge({ item }: { item: Pick<Item, "quantity" | "low_stock_
 export function StatusBadge({ status }: { status: RequestStatus }) {
   const tones = { pending: "amber", approved: "green", rejected: "red", cancelled: "neutral" };
   return <span className={`sys-badge sys-badge-${tones[status]}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>;
+}
+
+export function Pagination({ pathname, query = {}, page, totalPages, pageKey = "page", label = "Pages" }: { pathname: string; query?: Record<string, string>; page: number; totalPages: number; pageKey?: string; label?: string }) {
+  if (totalPages <= 1 && page <= 1) return null;
+  function href(target: number) {
+    const params = new URLSearchParams(query);
+    params.set(pageKey, String(target));
+    return `${pathname}?${params.toString()}`;
+  }
+  return <nav className="sys-pagination sys-no-print" aria-label={label}><span>Page {page} of {totalPages}</span><div>{page > 1 && <Link className="sys-button sys-button-secondary sys-button-small" href={href(Math.min(page - 1, totalPages))}>Previous</Link>}{page < totalPages && <Link className="sys-button sys-button-secondary sys-button-small" href={href(page + 1)}>Next</Link>}</div></nav>;
 }

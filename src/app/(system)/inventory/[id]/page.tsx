@@ -10,6 +10,8 @@ import { requireProfile } from "@/lib/auth";
 import { BarcodeLabel } from "@/components/system/barcode-label";
 import { isManager, type InventoryTransaction, type Item, type Profile } from "@/lib/types";
 
+type HistoryRow = Pick<InventoryTransaction, "id" | "kind" | "quantity_delta" | "balance_after" | "note" | "reference" | "created_at"> & { actor: Pick<Profile, "full_name" | "email"> | null };
+
 export default async function InventoryItemPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const { supabase, profile } = await requireProfile(undefined, `/inventory/${id}`);
@@ -18,23 +20,14 @@ export default async function InventoryItemPage({ params, searchParams }: { para
   const [itemResult, historyResult] = await Promise.all([
     supabase.from("items").select("*").eq("id", id).maybeSingle(),
     manager
-      ? supabase.from("transactions").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100)
+      ? supabase.from("transactions").select("id,kind,quantity_delta,balance_after,note,reference,created_at,actor:profiles!transactions_actor_id_fkey(full_name,email)").eq("item_id", id).order("created_at", { ascending: false }).limit(100).returns<HistoryRow[]>()
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (itemResult.error) throw new Error("Unable to load the supply record.");
   if (!itemResult.data) notFound();
   const item = itemResult.data as Item;
   if (historyResult.error) throw new Error("Unable to load the stock history.");
-  const history = (historyResult.data ?? []) as InventoryTransaction[];
-  let actors = new Map<string, string>();
-  if (manager) {
-    const actorIds = [...new Set(history.map((row) => row.actor_id))];
-    if (actorIds.length) {
-      const actorResult = await supabase.from("profiles").select("id,full_name,email").in("id", actorIds);
-      if (actorResult.error) throw new Error("Unable to load stock history details.");
-      actors = new Map((actorResult.data ?? []).map((row) => [row.id, (row as Pick<Profile, "id" | "full_name" | "email">).full_name || (row as Profile).email]));
-    }
-  }
+  const history = historyResult.data ?? [];
 
   const movementQuery = query.movement === "stock_out" || query.movement === "stock_in" || query.movement === "adjustment" ? query.movement : undefined;
   return <>
@@ -70,7 +63,7 @@ export default async function InventoryItemPage({ params, searchParams }: { para
     </section>}
     {manager && <section className="sys-card sys-card-flush" style={{ marginTop: 22 }}>
       <div className="sys-card-header"><div><h2>Transaction history</h2><p>Most recent 100 stock movements</p></div></div>
-      {history.length ? <div className="sys-table-wrap"><table className="sys-table"><thead><tr><th>Date</th><th>Type</th><th>Change</th><th>Balance</th><th>Recorded by</th><th>Note</th></tr></thead><tbody>{history.map((row) => <tr key={row.id}><td>{formatDate(row.created_at)}</td><td>{movementLabels[row.kind]}</td><td className="sys-numeric">{row.quantity_delta > 0 ? "+" : ""}{formatNumber(row.quantity_delta)} {item.unit}</td><td className="sys-numeric">{formatNumber(row.balance_after)} {item.unit}</td><td>{actors.get(row.actor_id) || "Account"}</td><td>{row.note || row.reference || "—"}</td></tr>)}</tbody></table></div> : <p className="sys-muted" style={{ padding: "0 24px 24px" }}>No transactions have been recorded for this item.</p>}
+      {history.length ? <div className="sys-table-wrap"><table className="sys-table"><thead><tr><th>Date</th><th>Type</th><th>Change</th><th>Balance</th><th>Recorded by</th><th>Note</th></tr></thead><tbody>{history.map((row) => <tr key={row.id}><td>{formatDate(row.created_at)}</td><td>{movementLabels[row.kind]}</td><td className="sys-numeric">{row.quantity_delta > 0 ? "+" : ""}{formatNumber(row.quantity_delta)} {item.unit}</td><td className="sys-numeric">{formatNumber(row.balance_after)} {item.unit}</td><td>{(row.actor?.full_name || row.actor?.email) || "Account"}</td><td>{row.note || row.reference || "—"}</td></tr>)}</tbody></table></div> : <p className="sys-muted" style={{ padding: "0 24px 24px" }}>No transactions have been recorded for this item.</p>}
     </section>}
   </>;
 }

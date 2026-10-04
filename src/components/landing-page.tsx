@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import campus from "../../pic/Panpacific-University-North-Philippines.jpg";
 import universityLogo from "../../pic/Panpacific-University.png";
 import boxes from "../../pic/boxes.png";
@@ -11,7 +11,6 @@ import checklist from "../../pic/checklist.png";
 import flower from "../../pic/flower.png";
 
 type Feature = "Inventory" | "Stock Information" | "Supply Updates";
-type PublicStock = { id: string; name: string; category: string; unit: string; quantity: number };
 
 function UniversityLogo({ decorative = false }: { decorative?: boolean }) {
   return (
@@ -20,7 +19,7 @@ function UniversityLogo({ decorative = false }: { decorative?: boolean }) {
         src={universityLogo}
         alt={decorative ? "" : "Panpacific University"}
         sizes="420px"
-        preload
+        preload={!decorative}
       />
     </span>
   );
@@ -63,28 +62,24 @@ function SupplyScene() {
         src={boxes}
         alt=""
         sizes="220px"
-        preload
       />
       <Image
         className="scene-asset scene-laptop"
         src={laptop}
         alt=""
         sizes="(max-width: 520px) 350px, 600px"
-        preload
       />
       <Image
         className="scene-asset scene-flower"
         src={flower}
         alt=""
         sizes="200px"
-        preload
       />
       <Image
         className="scene-asset scene-checklist"
         src={checklist}
         alt=""
         sizes="180px"
-        preload
       />
     </div>
   );
@@ -99,7 +94,7 @@ const features: { title: Feature; description: string }[] = [
   { title: "Supply Updates", description: "See the latest stock information." },
 ];
 
-export default function LandingPage({ stocks }: { stocks: PublicStock[] }) {
+export default function LandingPage({ stockContent }: { stockContent: ReactNode }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [dialogContent, setDialogContent] = useState<Feature | "About">(
     "Inventory",
@@ -242,17 +237,7 @@ export default function LandingPage({ stocks }: { stocks: PublicStock[] }) {
             <h2 id="public-stock-title">Selected available supplies</h2>
             <p>Current quantities for supplies selected by the Supplies Office.</p>
           </div>
-          {stocks.length ? (
-            <div className="public-stock-grid">
-              {stocks.map((item) => (
-                <article className="public-stock-card" key={item.id}>
-                  <div><span className="public-stock-category">{item.category}</span><h3>{item.name}</h3></div>
-                  <div className="public-stock-quantity"><strong>{new Intl.NumberFormat("en-PH").format(item.quantity)}</strong><span>{item.unit}{item.quantity === 1 ? "" : "s"} available</span></div>
-                  <span className={item.quantity > 0 ? "public-stock-status in-stock" : "public-stock-status out-of-stock"}>{item.quantity > 0 ? "In stock" : "Out of stock"}</span>
-                </article>
-              ))}
-            </div>
-          ) : <p className="public-stock-empty">No supplies are currently selected for public display.</p>}
+          {stockContent}
         </section>
       </main>
       <footer className="site-footer">

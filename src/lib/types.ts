@@ -42,6 +42,9 @@ export interface InventoryTransaction {
   created_at: string;
 }
 
+export type RequisitionItem = Pick<Item, "id" | "name" | "sku" | "unit" | "quantity" | "location" | "category" | "is_archived">;
+export type StockOutItem = Pick<Item, "id" | "name" | "sku" | "unit" | "quantity" | "category" | "low_stock_threshold">;
+
 export interface Requisition {
   id: string;
   version: number;

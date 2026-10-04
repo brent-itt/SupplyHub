@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type ReactNode } from "react";
-import { roleLabels, type ActionResult, type FormAction, type Item, type MovementKind, type Profile, type Requisition, type Role } from "@/lib/types";
+import { roleLabels, type ActionResult, type FormAction, type Item, type MovementKind, type Profile, type Requisition, type RequisitionItem, type Role } from "@/lib/types";
 import { ActionForm } from "./action-form";
 import { matchingSupplyNames } from "@/lib/requisitions";
 
@@ -55,7 +55,7 @@ export function MovementForm({ action, item, initialKind = "stock_in" }: { actio
   </ActionForm>;
 }
 
-export function RequestForm({ action, items, itemId, requesterName, defaultDate, request }: { action: FormAction; items: Item[]; itemId?: string; requesterName: string; defaultDate: string; request?: Requisition }) {
+export function RequestForm({ action, items, itemId, requesterName, defaultDate, request }: { action: FormAction; items: RequisitionItem[]; itemId?: string; requesterName: string; defaultDate: string; request?: Requisition }) {
   const availableItems = items.filter((item) => !item.is_archived);
   const initialItem = availableItems.find(item => item.id === (request?.item_id ?? itemId));
   const [itemName, setItemName] = useState(initialItem?.name ?? "");

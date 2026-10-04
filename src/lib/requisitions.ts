@@ -10,7 +10,7 @@ export function universityDate(now = new Date()): string {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-export function matchingSupplyNames(items: Item[], name: string): Item[] {
+export function matchingSupplyNames<T extends Pick<Item, "name" | "is_archived">>(items: T[], name: string): T[] {
   const normalized = name.trim().toLocaleLowerCase();
   return items.filter(item => !item.is_archived && item.name.trim().toLocaleLowerCase() === normalized);
 }
