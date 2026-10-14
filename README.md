@@ -46,6 +46,10 @@ On a new machine, run `vercel login` and `vercel link --project supalies --scope
 
 ## Features
 
+- The home page shows one QR code per category containing publicly selected supplies. Scan a code to visit `/stock?category=Uniform` (or another category); only that category's public supplies and capped display quantities appear. Category cards have no view or download buttons and the QR images are not clickable. Set each item's **Category** and public visibility in Inventory. Set `NEXT_PUBLIC_SITE_URL` to the published HTTPS address for QR codes shared with students. No additional database migration is needed.
+
+- VIP Queue shows overall queue numbers and a numbered reminder priority for requests with stock ready to collect, with **First in line** and **Remind first** labels. Apply `supabase/migrations/202610150004_vip_queue_positions.sql` after the earlier migrations. Numbers remain consistent across search and pagination; sending reminders does not change priority.
+
 - VIP Queue's **Send reminder** action emails each student's current collection status through Gmail SMTP or Resend. For Gmail, follow [the Gmail setup guide](docs/gmail-reminders.md). For Resend: Apply `202610150002_vip_email_reminders.sql`, then set server-only `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (a mailbox on a verified Resend domain); optionally set `RESEND_REPLY_TO_EMAIL`. Restart the local server or redeploy after configuring these values. Admins can enter missing emails on older submissions. Reminders are sent only when an admin clicks **Send email reminder**.
 
 - VIP Queue for unfilled student requests, with required student email, partial barcode collection, and stock reserved for earlier waiting students. Apply `202610150001_student_vip_queue.sql` after the student-log migrations. Admins see requested, issued, remaining, and currently available quantities; completed requests leave the queue automatically.

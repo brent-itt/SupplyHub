@@ -380,7 +380,8 @@ p {
   font-weight: 750;
   letter-spacing: 1.4px;
 }
-.public-stock-heading h2 {
+.public-stock-heading h2,
+.public-stock-heading h1 {
   margin-top: 8px;
   color: var(--navy);
   font-size: 30px;
@@ -459,6 +460,15 @@ p {
   text-align: center;
   background: #fff;
 }
+.public-stock-grid.public-category-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 330px)); justify-content: center; }
+.public-category-card { align-items: center; text-align: center; gap: 16px; }
+.public-category-card h3 { font-size: 21px; overflow-wrap: anywhere; }
+.public-category-card > p { font-size: 12px; color: #576a86; max-width: 250px; }
+.public-category-qr { display: block; width: min(100%, 220px); background: white; border-radius: 8px; }
+.public-category-qr img { width: 100%; height: auto; display: block; }
+.public-category-page { min-height: 100svh; background: #f2f6fb; }
+.public-category-page .public-stock-heading h1 { overflow-wrap: anywhere; }
+.public-category-navigation { max-width: 1030px; margin: 0 auto 35px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
 .site-footer {
   position: relative;
   isolation: isolate;

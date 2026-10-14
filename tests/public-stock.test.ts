@@ -78,5 +78,10 @@ test("public quantities are private, capped, persistent, and independent of inve
     assert.equal((await record()).public_quantity, 12, "Rerunning the migration preserves saved limits");
     const newItem = await db.query<{ public_quantity: number }>("insert into public.items(sku,name) values ('NEW','New supply') returning public_quantity");
     assert.equal(newItem.rows[0].public_quantity, 0);
+    await db.query("update public.items set category='Uniform' where id in ($1,$2,$3)", [item, hidden, archived]);
+    await db.exec("update public.items set category='Paper products',quantity=3,public_quantity=2,show_on_landing=true where sku='NEW'");
+    const uniformStock = await asRole("anon", null, "select * from public.get_public_stock() where category=$1", ["Uniform"]);
+    assert.deepEqual(uniformStock, [{ id: item, name: "Paper", category: "Uniform", unit: "piece", quantity: 12 }], "Category pages exclude other categories, hidden supplies, and archived supplies while retaining capped quantities");
+    assert.deepEqual(await asRole("anon", null, "select * from public.get_public_stock() where category=$1", ["Unknown"]), []);
   } finally { await db.close(); }
 });

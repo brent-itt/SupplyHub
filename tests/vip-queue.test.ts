@@ -36,6 +36,7 @@ test("VIP collections preserve partial balances, FIFO reservations, privacy, ret
     await asRole("authenticated", staff, "select public.process_student_stock_out($1,'issued','Receipt checked','TYPE-B')", [historical]);
     await asRole("service_role", null, oldSubmit, [oldWaiting, item, 10, "a".repeat(64)]);
     await db.exec(await readFile(new URL(migration, dir), "utf8"));
+    await db.exec(await readFile(new URL("202610150004_vip_queue_positions.sql", dir), "utf8"));
     const log = async (id: string) => (await db.query<Record<string, unknown>>("select * from public.student_stock_out_logs where id=$1", [id])).rows[0];
     const stock = async () => (await db.query<{ quantity: number }>("select quantity from public.items where id=$1", [item])).rows[0].quantity;
     const queue = () => asRole("authenticated", admin, "select * from public.student_vip_queue order by created_at,id");
@@ -102,11 +103,14 @@ test("VIP collections preserve partial balances, FIFO reservations, privacy, ret
     assert.equal(await available(second), 3);
     assert.equal(await available(null), 1, "Surplus beyond all VIP balances can be issued normally");
     assert.deepEqual((await queue()).map(row => row.available_quantity), [2, 2]);
+    assert.deepEqual((await queue()).map(row => [row.queue_position, row.item_position, row.reminder_position]), [[1, 1, 1], [2, 2, 2]]);
     await move(1, "stock_out");
     const finalKey = randomUUID();
     await collect(first, 2, finalKey);
     assert.equal((await log(first)).status, "issued");
     assert.equal((await queue()).length, 1);
+    assert.equal((await queue())[0].queue_position, 1, "Completing a collection advances the remaining queue");
+    assert.equal((await queue())[0].reminder_position, 1);
     await collect(first, 2, finalKey);
     await collect(first, 3, firstKey); // A lost response can be retried even after later collections.
     await assert.rejects(collect(first, 1), /already/i);
@@ -132,5 +136,28 @@ test("VIP collections preserve partial balances, FIFO reservations, privacy, ret
     await move(4);
     assert.equal(await available(null), 4, "Rejecting an unfilled balance releases reservations");
     await assert.rejects(collect(later, 1), /already/i);
+
+    // Different items and tied timestamps must retain global ranks even when
+    // the UI filters to one student or requests the second page.
+    const emptyItem = randomUUID();
+    await db.query("insert into public.items(id,sku,name,quantity) values ($1,'EMPTY','Empty item',0)", [emptyItem]);
+    for (let index = 0; index < 28; index++) {
+      const id = `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+      await db.query(`insert into public.student_stock_out_logs
+        (id,student_name,receipt_date,receipt_number,item_id,item_name,item_code,unit,quantity,created_at,vip_queued_at)
+        values ($1,$2,'2026-10-15',$2,$3,'Queue test','TEST','piece',1,'2026-10-15','2026-10-15')`,
+      [id, `Position ${index + 1}`, [1, 3].includes(index) ? item : emptyItem]);
+    }
+    const ranked = await queue();
+    assert.equal(ranked[0].queue_position, 1);
+    assert.equal(ranked[0].reminder_position, null, "An older request without stock has no collection reminder rank");
+    assert.deepEqual(ranked.filter(row => row.reminder_position !== null).map(row => [row.queue_position, row.reminder_position]), [[2, 1], [4, 2]]);
+    const filtered = await asRole("authenticated", admin, "select * from public.student_vip_queue where student_name='Position 4'");
+    assert.equal(filtered[0].queue_position, 4);
+    assert.equal(filtered[0].reminder_position, 2, "Filtering must not renumber reminders");
+    const nextPage = await asRole("authenticated", admin, "select * from public.student_vip_queue order by created_at,id limit 25 offset 25");
+    assert.deepEqual(nextPage.map(row => row.queue_position), [26, 27, 28]);
+    await db.query("update public.items set is_archived=true where id=$1", [item]);
+    assert.ok((await queue()).every(row => row.reminder_position === null), "Archived items cannot be ready for collection reminders");
   } finally { await db.close(); }
 });

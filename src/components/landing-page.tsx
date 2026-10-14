@@ -234,8 +234,8 @@ export default function LandingPage({ stockContent }: { stockContent: ReactNode 
         <section className="public-stock-section" id="available-stock" aria-labelledby="public-stock-title">
           <div className="public-stock-heading">
             <p className="public-stock-eyebrow">PUBLIC STOCK AVAILABILITY</p>
-            <h2 id="public-stock-title">Selected available supplies</h2>
-            <p>Current quantities for supplies selected by the Supplies Office.</p>
+            <h2 id="public-stock-title">Browse supplies by category</h2>
+            <p>Scan a category’s QR code to view its selected supplies and current availability.</p>
           </div>
           {stockContent}
         </section>
@@ -282,7 +282,7 @@ export default function LandingPage({ stockContent }: { stockContent: ReactNode 
                 <FeatureIcon kind={dialogContent} />
               </span>
               <h3>View current supply availability</h3>
-              <p>Browse the selected stock list on this page. Admins manage stock quantities. Staff can sign in to submit supply requests.</p>
+              <p>Scan a category’s QR code on this page to view selected supplies and current availability. Staff can sign in to submit supply requests.</p>
               <Link className="dialog-done" href="#available-stock" onClick={() => dialogRef.current?.close()}>View available stock</Link>
             </>
           )}

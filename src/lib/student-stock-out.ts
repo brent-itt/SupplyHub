@@ -22,7 +22,7 @@ export type StudentStockOutLog = {
 };
 export type StudentCheckoutLog = Pick<StudentStockOutLog, "id" | "student_name" | "student_email" | "receipt_date" | "receipt_number" | "item_id" | "item_name" | "quantity" | "unit" | "status" | "fulfilled_quantity" | "vip_queued_at">;
 export type StudentSubmissionResult = { error?: string; submission?: Pick<StudentStockOutLog, "id" | "student_name" | "student_email" | "receipt_date" | "receipt_number" | "item_name" | "item_code" | "unit" | "quantity" | "status" | "vip_queued_at" | "fulfilled_quantity"> };
-export type VipQueueEntry = StudentStockOutLog & { stock_quantity: number; is_archived: boolean; remaining_quantity: number; available_quantity: number; item_position: number };
+export type VipQueueEntry = StudentStockOutLog & { stock_quantity: number; is_archived: boolean; remaining_quantity: number; available_quantity: number; item_position: number; queue_position: number; reminder_position: number | null };
 
 export function studentFormURL(site: string): string {
   const url = new URL(site);
