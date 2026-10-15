@@ -78,6 +78,13 @@
 .student-log-review { min-width: 230px; }
 .student-log-review summary { cursor: pointer; }
 .student-log-review .sys-form { margin-top: 15px; }
+.vip-row-actions { display: flex; align-items: flex-start; gap: 18px; margin-top: 8px; }
+.vip-row-actions .student-log-review { min-width: 130px; }
+.vip-row-actions summary { cursor: pointer; white-space: nowrap; }
+.vip-reminder { min-width: 115px; }
+.vip-reminder-form { width: 300px; margin-top: 15px; }
+.vip-reminder-preview { padding: 12px; background: #f7f9fb; border: 1px solid #e7ecf1; border-radius: 8px; }
+.vip-reminder-preview p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; margin-top: 8px; }
 .student-qr-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; align-items: start; }
 .student-qr-actions { margin-top: 22px; }
 .student-qr-poster { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }

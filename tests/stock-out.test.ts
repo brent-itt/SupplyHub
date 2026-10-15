@@ -9,11 +9,12 @@ import type { StudentCheckoutLog } from "../src/lib/student-stock-out";
 const receipt = { recipient_name: "Maria Santos", receipt_number: "SO-2026-0001", receipt_date: "2026-10-04" };
 
 test("student checkout requires a scan and matches the saved student, receipt, item, and quantity", () => {
-  const log: StudentCheckoutLog = { id: randomUUID(), student_name: receipt.recipient_name, receipt_number: receipt.receipt_number, receipt_date: receipt.receipt_date, item_id: randomUUID(), item_name: "Uniform", quantity: 2, unit: "piece", status: "pending" };
+  const log: StudentCheckoutLog = { id: randomUUID(), student_name: receipt.recipient_name, receipt_number: receipt.receipt_number, receipt_date: receipt.receipt_date, item_id: randomUUID(), item_name: "Uniform", quantity: 2, unit: "piece", status: "pending", student_email: "student@example.test", fulfilled_quantity: 0, vip_queued_at: null };
   const checkout = { ...receipt, reference: randomUUID(), student_log_id: log.id, scanned_barcode: "UNIFORM", note: "Student collection", lines: [{ item_id: log.item_id, quantity: 2, idempotency_key: randomUUID() }] };
   assert.equal(checkoutSchema.safeParse({ ...checkout, scanned_barcode: undefined }).success, false);
   assert.equal(matchesStudentCheckout(checkoutSchema.parse(checkout), log), true);
-  for (const invalid of [{ recipient_name: "Other student" }, { receipt_number: "OTHER" }, { receipt_date: "2026-10-05" }, { lines: [{ ...checkout.lines[0], quantity: 1 }] }, { lines: [{ ...checkout.lines[0], item_id: randomUUID() }] }]) {
+  assert.equal(matchesStudentCheckout({ ...checkout, lines: [{ ...checkout.lines[0], quantity: 1 }] }, log), true);
+  for (const invalid of [{ recipient_name: "Other student" }, { receipt_number: "OTHER" }, { receipt_date: "2026-10-05" }, { lines: [{ ...checkout.lines[0], quantity: 3 }] }, { lines: [{ ...checkout.lines[0], item_id: randomUUID() }] }]) {
     assert.equal(matchesStudentCheckout({ ...checkout, ...invalid }, log), false);
   }
 });

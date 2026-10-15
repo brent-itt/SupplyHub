@@ -25,11 +25,13 @@ export const checkoutSchema = z.object({
 });
 
 export type Checkout = z.infer<typeof checkoutSchema>;
-export type CheckoutResult = { completed: string[]; error?: string; canEdit: boolean };
+export type CheckoutResult = { completed: string[]; error?: string; canEdit: boolean; studentRemaining?: number };
 
 export function matchesStudentCheckout(checkout: Checkout, log: StudentCheckoutLog): boolean {
+  // Compare against the original request so a lost response can still be retried
+  // after fulfillment changes. The RPC checks the live balance after retry lookup.
   return checkout.student_log_id === log.id && checkout.lines.length === 1 &&
-    checkout.lines[0].item_id === log.item_id && checkout.lines[0].quantity === log.quantity &&
+    checkout.lines[0].item_id === log.item_id && checkout.lines[0].quantity > 0 && checkout.lines[0].quantity <= log.quantity &&
     checkout.recipient_name === log.student_name && checkout.receipt_number === log.receipt_number && checkout.receipt_date === log.receipt_date;
 }
 

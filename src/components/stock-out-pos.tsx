@@ -13,7 +13,7 @@ import type { StudentCheckoutLog } from "@/lib/student-stock-out";
 
 type CartLine = { item: StockOutItem; quantity: number };
 
-export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOutItem[]; defaultDate: string; studentLog?: StudentCheckoutLog }) {
+export function StockOutPOS({ items, defaultDate, studentLog, availableQuantities }: { items: StockOutItem[]; defaultDate: string; studentLog?: StudentCheckoutLog; availableQuantities: Record<string, number> }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -38,6 +38,8 @@ export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOu
   const filtered = items.filter(item => (!category || item.category === category) &&
     `${item.name} ${item.sku}`.toLowerCase().includes(search.trim().toLowerCase()));
   const total = cart.reduce((sum, line) => sum + line.quantity, 0);
+  const remaining = studentLog ? studentLog.quantity - studentLog.fulfilled_quantity : 0;
+  const available = (item: StockOutItem) => availableQuantities[item.id] ?? 0;
 
   function updateCart(lines: CartLine[]) {
     if (!lines.length) setScannedBarcode("");
@@ -48,8 +50,8 @@ export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOu
   function addItem(item: StockOutItem) {
     if (locked || studentLog) return;
     const existing = cartRef.current.find(line => line.item.id === item.id);
-    if ((existing?.quantity ?? 0) >= item.quantity) {
-      setError(`${item.name}: only ${item.quantity} ${item.unit} available.`);
+    if ((existing?.quantity ?? 0) >= available(item)) {
+      setError(`${item.name}: only ${available(item)} ${item.unit} available after VIP reservations.`);
       setMessage("");
       return;
     }
@@ -78,22 +80,23 @@ export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOu
         setError(`Wrong item. Scan the barcode for ${studentLog.item_name}.`);
         return;
       }
-      if (item.quantity < studentLog.quantity) {
-        setError(`${item.name}: ${studentLog.quantity} ${item.unit} requested, but only ${item.quantity} available.`);
+      const quantity = Math.min(remaining, available(item));
+      if (quantity < 1) {
+        setError(`${item.name}: no stock available for this collection. The remaining ${remaining} ${item.unit} are waiting in VIP Queue. Earlier students have priority when stock returns.`);
         return;
       }
-      updateCart([{ item, quantity: studentLog.quantity }]);
+      updateCart([{ item, quantity }]);
       setScannedBarcode(code!);
       setError("");
-      setMessage(`Barcode verified. ${studentLog.quantity} ${item.unit} ready for stock out.`);
+      setMessage(`Barcode verified. Issue ${quantity} ${item.unit} now.${quantity < remaining ? ` The remaining ${remaining - quantity} will stay in VIP Queue after confirmation.` : ""}`);
     } else addItem(item);
   }
 
   function changeQuantity(id: string, quantity: number) {
     if (locked || studentLog) return;
     const item = items.find(item => item.id === id);
-    if (!item || !Number.isInteger(quantity) || quantity < 1 || quantity > item.quantity) {
-      setError(`Enter a whole quantity between 1 and ${item?.quantity ?? 0}.`);
+    if (!item || !Number.isInteger(quantity) || quantity < 1 || quantity > available(item)) {
+      setError(`Enter a whole quantity between 1 and ${item ? available(item) : 0}.`);
       return;
     }
     updateCart(cartRef.current.map(line => line.item.id === id ? { ...line, quantity } : line));
@@ -150,7 +153,7 @@ export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOu
 
   return <div className="pos-layout">
     <div className="pos-catalog-column sys-no-print">
-      {studentLog && <div className="sys-card"><p className="sys-eyebrow">STUDENT COLLECTION</p><h2>{studentLog.item_name}</h2><p>{studentLog.quantity} {studentLog.unit} for {studentLog.student_name}</p><p className="sys-form-hint">{closed ? `This submission is already ${studentLog.status}. Open another entry from the student log.` : "Scan this item's barcode to add the requested quantity. The student details below are filled in from the submission."}</p></div>}
+      {studentLog && <div className="sys-card"><p className="sys-eyebrow">{studentLog.vip_queued_at ? "VIP STUDENT COLLECTION" : "STUDENT COLLECTION"}</p><h2>{studentLog.item_name}</h2><p>{studentLog.student_name}{studentLog.student_email && <> · {studentLog.student_email}</>}</p><p>{studentLog.quantity} {studentLog.unit} requested · {studentLog.fulfilled_quantity} issued · {remaining} remaining</p><p className="sys-form-hint">{closed ? `This submission is already ${studentLog.status}. Open another entry from the student log.` : "Scan this item's barcode to issue the available quantity. Any unfilled balance stays in VIP Queue, with earlier students served first."}</p></div>}
       {!locked && <BarcodeScanner onScan={scan} disabled={pending}/>}
       {locked && !closed && <div className="pos-scanner pos-review-banner"><Icon name={complete ? "check" : "lock"} size={24}/><div><h2>{complete ? "Stock updated" : "Checkout in progress"}</h2><p>{complete ? "Your stock out has been recorded." : "Review the cart on the right. Scanning is paused during checkout."}</p></div></div>}
       <div aria-live="polite">{message && !error && !locked && <p className="pos-feedback"><Icon name="check" size={16}/>{message}</p>}</div>
@@ -162,10 +165,10 @@ export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOu
         <div className="pos-products">
           {filtered.slice(0, 60).map(item => {
             const selected = cart.find(line => line.item.id === item.id)?.quantity ?? 0;
-            return <button type="button" className={`pos-product${selected ? " pos-product-selected" : ""}`} key={item.id} disabled={!!studentLog || locked || item.quantity === 0 || selected >= item.quantity} onClick={() => addItem(item)} aria-label={`Add ${item.name} to cart`}>
+            return <button type="button" className={`pos-product${selected ? " pos-product-selected" : ""}`} key={item.id} disabled={!!studentLog || locked || available(item) === 0 || selected >= available(item)} onClick={() => addItem(item)} aria-label={`Add ${item.name} to cart`}>
               <div className="pos-product-top"><span className="pos-product-icon"><Icon name="inventory" size={25}/></span><span className={`sys-badge sys-badge-${item.quantity === 0 ? "red" : item.quantity <= item.low_stock_threshold ? "amber" : "green"}`}>{item.quantity === 0 ? "Out of stock" : item.quantity <= item.low_stock_threshold ? "Low stock" : "Available"}</span></div>
               <span className="pos-product-category">{item.category}</span><strong>{item.name}</strong><span className="pos-product-code">{item.sku}</span>
-              <span className="pos-product-bottom"><span><b>{item.quantity.toLocaleString()}</b> {item.unit} in stock</span><span className="pos-product-add">{selected ? selected : <Icon name="plus" size={17}/>}</span></span>
+              <span className="pos-product-bottom"><span><b>{available(item).toLocaleString()}</b> {item.unit} available{available(item) < item.quantity && <small> · {item.quantity - available(item)} reserved for VIP</small>}</span><span className="pos-product-add">{selected ? selected : <Icon name="plus" size={17}/>}</span></span>
             </button>;
           })}
         </div>
@@ -180,8 +183,8 @@ export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOu
         return <div className={`pos-cart-line${issued ? " pos-line-issued" : ""}`} key={line.item.id}>
           <div className="pos-line-title"><strong>{line.item.name}</strong>{!locked && <button type="button" onClick={() => updateCart(cart.filter(row => row.item.id !== line.item.id))} aria-label={`Remove ${line.item.name}`}>×</button>}</div>
           <p>{line.item.sku} <span>· {line.item.unit}</span></p>
-          <div className="pos-line-bottom">{locked || studentLog ? <strong>{line.quantity} {line.item.unit}</strong> : <div className="pos-quantity"><button type="button" aria-label={`Decrease ${line.item.name}`} disabled={line.quantity <= 1} onClick={() => changeQuantity(line.item.id, line.quantity - 1)}>−</button><input aria-label={`Quantity for ${line.item.name}`} type="number" min={1} max={items.find(item => item.id === line.item.id)?.quantity ?? line.item.quantity} value={line.quantity} onChange={event => changeQuantity(line.item.id, Number(event.target.value))}/><button type="button" aria-label={`Increase ${line.item.name}`} disabled={line.quantity >= (items.find(item => item.id === line.item.id)?.quantity ?? line.item.quantity)} onClick={() => changeQuantity(line.item.id, line.quantity + 1)}>+</button></div>}
-            {issued ? <span className="pos-issued"><Icon name="check" size={14}/> Issued</span> : <span className="sys-muted">{locked ? "To issue" : `${items.find(item => item.id === line.item.id)?.quantity ?? 0} available`}</span>}
+          <div className="pos-line-bottom">{locked || studentLog ? <strong>{line.quantity} {line.item.unit}</strong> : <div className="pos-quantity"><button type="button" aria-label={`Decrease ${line.item.name}`} disabled={line.quantity <= 1} onClick={() => changeQuantity(line.item.id, line.quantity - 1)}>−</button><input aria-label={`Quantity for ${line.item.name}`} type="number" min={1} max={availableQuantities[line.item.id] ?? 0} value={line.quantity} onChange={event => changeQuantity(line.item.id, Number(event.target.value))}/><button type="button" aria-label={`Increase ${line.item.name}`} disabled={line.quantity >= (availableQuantities[line.item.id] ?? 0)} onClick={() => changeQuantity(line.item.id, line.quantity + 1)}>+</button></div>}
+            {issued ? <span className="pos-issued"><Icon name="check" size={14}/> Issued</span> : <span className="sys-muted">{locked ? "To issue" : `${availableQuantities[line.item.id] ?? 0} available`}</span>}
           </div>
         </div>;
       })}</div>}
@@ -202,7 +205,7 @@ export function StockOutPOS({ items, defaultDate, studentLog }: { items: StockOu
           </>}
           {review && <div className="pos-confirm" role="status"><strong>Confirm stock out</strong><p>Issue {total} units across {cart.length} supply lines? Available stock will be reduced immediately. Each line is recorded separately.</p><div className="sys-actions"><button type="button" className="sys-button" onClick={checkout}>Confirm & issue stock</button><button type="button" className="sys-button sys-button-secondary" onClick={() => setReview(false)}>Back</button></div></div>}
           {result?.error && <div className="sys-error pos-checkout-error" role="alert"><strong>{result.completed.length} of {cart.length} supply lines issued</strong><p>{result.error}</p><p>Confirmed lines stay recorded. Retrying will not issue them twice.</p></div>}
-          {complete && <div className="sys-notice sys-notice-success" role="status"><Icon name="check"/><span>Stock out complete. Inventory, reports, and any linked student log are updated.</span></div>}
+          {complete && <div className="sys-notice sys-notice-success" role="status"><Icon name="check"/><span>{result?.studentRemaining ? `${total} issued in this collection. ${result.studentRemaining} ${studentLog?.unit ?? "units"} remain in VIP Queue.` : "Stock out complete. Inventory, reports, and any linked student log are updated."}</span></div>}
           <div className="pos-checkout-actions sys-no-print">
             {!locked && <><button className="sys-button pos-checkout-button" type="submit" disabled={!cart.length || (!!studentLog && !scannedBarcode)}><Icon name="arrow" size={18}/> Review stock out <span>{total} units</span></button><button type="button" className="pos-clear" disabled={!cart.length} onClick={() => { updateCart([]); setMessage(""); setError(""); }}>Clear cart</button></>}
             {attempt && !complete && <button type="button" className="sys-button pos-checkout-button" onClick={checkout} disabled={pending}>{pending ? "Updating stock…" : "Retry stock out"}</button>}

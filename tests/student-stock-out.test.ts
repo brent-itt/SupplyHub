@@ -9,9 +9,9 @@ import { studentStockOutSchema, studentFormURL } from "../src/lib/student-stock-
 import { studentFormQR } from "../src/lib/student-form-qr";
 
 test("student form validates required fields and QR codes open the public form", async () => {
-  const input = { submission_id: randomUUID(), student_name: "  Maria Santos  ", receipt_date: "2026-10-04", receipt_number: "OR-001", item_id: randomUUID(), quantity: "2" };
+  const input = { submission_id: randomUUID(), student_name: "  Maria Santos  ", student_email: "Maria@example.test", receipt_date: "2026-10-04", receipt_number: "OR-001", item_id: randomUUID(), quantity: "2" };
   assert.equal(studentStockOutSchema.parse(input).student_name, "Maria Santos");
-  for (const invalid of [{ student_name: " " }, { receipt_number: "" }, { receipt_date: "2026-02-30" }, { receipt_date: "0000-01-01" }, { quantity: "0" }, { quantity: "1.5" }, { item_id: "fake" }]) {
+  for (const invalid of [{ student_email: "bad-email" }, { student_email: "" }, { student_name: " " }, { receipt_number: "" }, { receipt_date: "2026-02-30" }, { receipt_date: "0000-01-01" }, { quantity: "0" }, { quantity: "1.5" }, { item_id: "fake" }]) {
     assert.equal(studentStockOutSchema.safeParse({ ...input, ...invalid }).success, false);
   }
   for (const site of ["https://supplyhub.example/scan?x=1", "http://192.168.1.10:3000"]) {
@@ -48,7 +48,7 @@ test("student submissions stay private and pending; staff confirmation is atomic
       try { return (await db.query<Record<string, unknown>>(sql, args)).rows; }
       finally { await db.exec("reset role"); }
     }
-    const submitSQL = "select public.submit_student_stock_out($1,$2,$3::date,$4,$5,$6,$7) as id";
+    const submitSQL = "select public.submit_student_stock_out($1,$2,$3::date,$4,$5,$6,$7,'student@example.test') as id";
     const id = randomUUID(), rateKey = "a".repeat(64);
     const args = [id, "Student Name", "2026-10-04", "OR-001", item, 2, rateKey];
     const submit = (values = args) => asRole("service_role", null, submitSQL, values);

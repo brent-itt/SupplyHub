@@ -19,6 +19,7 @@ export function SystemNavigation({ role }: { role: Role }) {
     { href: "/inventory", label: "Inventory", icon: "inventory" },
   ];
   links.push({ href: "/requisitions", label: "Requisitions", icon: "requests" });
+  if (isManager(role)) links.push({ href: "/vip-queue", label: "VIP Queue", icon: "clock" });
   links.push({ href: "/student-logs", label: "Student stock-out log", icon: "requests" });
   if (role === "staff" || isManager(role)) links.push({ href: "/scan", label: "Barcode stock out", icon: "scan" });
   if (isManager(role)) links.push({ href: "/reports", label: "Reports", icon: "reports" });

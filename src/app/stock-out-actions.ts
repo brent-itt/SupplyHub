@@ -12,15 +12,17 @@ export async function checkoutStockAction(input: unknown): Promise<CheckoutResul
     const { supabase } = await authorizeMutation(["staff", "admin", "super_admin"]);
     const checkout = parsed.data;
     if (checkout.student_log_id) {
-      const { data: log, error: readError } = await supabase.from("student_stock_out_logs").select("id,student_name,receipt_date,receipt_number,item_id,item_name,quantity,unit,status").eq("id", checkout.student_log_id).maybeSingle<StudentCheckoutLog>();
+      const { data: log, error: readError } = await supabase.from("student_stock_out_logs").select("id,student_name,student_email,receipt_date,receipt_number,item_id,item_name,quantity,unit,status,fulfilled_quantity,vip_queued_at").eq("id", checkout.student_log_id).maybeSingle<StudentCheckoutLog>();
       if (readError || !log) return { completed: [], error: "Unable to load the student submission. Retry this checkout.", canEdit: false };
       if (!matchesStudentCheckout(checkout, log)) return { completed: [], error: "Checkout must match the student's submitted details, item, and quantity. Reopen it from the student log.", canEdit: false };
       const { error } = await supabase.rpc("process_student_stock_out", {
         p_id: log.id, p_decision: "issued", p_note: checkout.note, p_scanned_barcode: checkout.scanned_barcode,
+        p_quantity: checkout.lines[0].quantity, p_idempotency_key: checkout.lines[0].idempotency_key,
       });
-      if (error) return { completed: [], error: error.code === "PGRST202" ? "Barcode verification needs database setup. Ask the administrator to apply migration 202610040006." : error.message, canEdit: false };
-      for (const path of ["/student-logs", "/scan", "/dashboard", "/inventory", "/reports", "/", `/inventory/${log.item_id}`]) revalidatePath(path);
-      return { completed: [log.item_id], canEdit: false };
+      if (error) return { completed: [], error: error.code === "PGRST202" ? "VIP collections need database setup. Ask the administrator to apply migration 202610150001_student_vip_queue.sql." : error.message, canEdit: error.code === "22023" };
+      const { data: updated } = await supabase.from("student_stock_out_logs").select("quantity,fulfilled_quantity").eq("id", log.id).single();
+      for (const path of ["/student-logs", "/vip-queue", "/scan", "/dashboard", "/inventory", "/reports", "/", `/inventory/${log.item_id}`]) revalidatePath(path);
+      return { completed: [log.item_id], canEdit: false, ...(updated ? { studentRemaining: updated.quantity - updated.fulfilled_quantity } : {}) };
     }
     const result = await issueCheckout(checkout, async (line) => {
       const { error } = await supabase.rpc("stock_movement", {
@@ -31,7 +33,7 @@ export async function checkoutStockAction(input: unknown): Promise<CheckoutResul
       return { error };
     });
     if (result.completed.length) {
-      for (const path of ["/scan", "/dashboard", "/inventory", "/reports", "/"]) revalidatePath(path);
+      for (const path of ["/scan", "/dashboard", "/inventory", "/reports", "/student-logs", "/vip-queue", "/"]) revalidatePath(path);
       for (const id of result.completed) revalidatePath(`/inventory/${id}`);
     }
     return result;

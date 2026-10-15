@@ -14,7 +14,7 @@ export default async function StudentFormPage() {
   const items: StudentFormItem[] = [];
   let available = !!admin;
   if (admin) {
-    const { error } = await admin.from("student_stock_out_logs").select("id").limit(0);
+    const { error } = await admin.from("student_stock_out_logs").select("id,student_email,fulfilled_quantity,vip_queued_at").limit(0);
     available = !error;
     for (let from = 0; ; from += 1000) {
       const { data, error: itemError } = await admin.from("items").select("id,name,sku,unit").eq("is_archived", false).order("name").order("id").range(from, from + 999);

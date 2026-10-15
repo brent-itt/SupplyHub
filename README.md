@@ -46,6 +46,10 @@ On a new machine, run `vercel login` and `vercel link --project supalies --scope
 
 ## Features
 
+- VIP Queue's **Send reminder** action emails each student's current collection status through Gmail SMTP or Resend. For Gmail, follow [the Gmail setup guide](docs/gmail-reminders.md). For Resend: Apply `202610150002_vip_email_reminders.sql`, then set server-only `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (a mailbox on a verified Resend domain); optionally set `RESEND_REPLY_TO_EMAIL`. Restart the local server or redeploy after configuring these values. Admins can enter missing emails on older submissions. Reminders are sent only when an admin clicks **Send email reminder**.
+
+- VIP Queue for unfilled student requests, with required student email, partial barcode collection, and stock reserved for earlier waiting students. Apply `202610150001_student_vip_queue.sql` after the student-log migrations. Admins see requested, issued, remaining, and currently available quantities; completed requests leave the queue automatically.
+
 - Public student stock-out form at `/form`, with a printable QR poster under **Student stock-out log**. Name, date, receipt number, item, and quantity are sent to a private log shared by Staff and Admin; staff confirms before inventory is reduced. Requires `202610040005_student_stock_out_logs.sql` and the existing server-only Supabase key (see [database setup](supabase/README.md)).
 
 - Email and password sign-in, password reset, and pending account approval.

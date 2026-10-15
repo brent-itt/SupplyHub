@@ -25,14 +25,16 @@ export async function submitStudentStockOut(_previous: StudentSubmissionResult, 
     const rateKey = createHmac("sha256", process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!).update(`student-form:${address}`).digest("hex");
     const input = parsed.data;
     const { error } = await admin.rpc("submit_student_stock_out", {
-      p_id: input.submission_id, p_student_name: input.student_name, p_receipt_date: input.receipt_date,
+      p_id: input.submission_id, p_student_name: input.student_name, p_student_email: input.student_email, p_receipt_date: input.receipt_date,
       p_receipt_number: input.receipt_number, p_item_id: input.item_id, p_quantity: input.quantity, p_rate_key: rateKey,
     });
     if (error) return { error: ["22023", "P0001"].includes(error.code) ? error.message : "Student submissions are temporarily unavailable. Please contact the Supplies Office." };
     const { data: saved, error: readError } = await admin.from("student_stock_out_logs")
-      .select("id,student_name,receipt_date,receipt_number,item_name,item_code,unit,quantity,status").eq("id", input.submission_id).single();
+      .select("id,student_name,student_email,receipt_date,receipt_number,item_name,item_code,unit,quantity,status,vip_queued_at,fulfilled_quantity").eq("id", input.submission_id).single();
     if (readError) return { error: "Your submission may have been saved. Retry this form to confirm it without creating a duplicate." };
     revalidatePath("/student-logs");
+    revalidatePath("/vip-queue");
+    revalidatePath("/scan");
     return { submission: saved };
   } catch {
     return { error: "Connection interrupted. Retry this form to confirm it without creating a duplicate." };
@@ -54,7 +56,9 @@ export async function processStudentStockOut(_previous: ActionResult, data: Form
       const { error } = await supabase.rpc("process_student_stock_out", { p_id: parsed.data.id, p_decision: parsed.data.decision, p_note: parsed.data.note });
       if (error) return { error: ["22023", "42501", "P0002"].includes(error.code) ? error.message : "Unable to process this submission. Please try again." };
       revalidatePath("/student-logs");
-      return { success: "Submission rejected. Stock was not changed." };
+      revalidatePath("/vip-queue");
+      revalidatePath("/scan");
+      return { success: "Remaining request rejected. Previously issued stock stays recorded." };
     }
   } catch (error) {
     return { error: error instanceof UserFacingError ? error.message : "Unable to confirm the result. Retry to check its status safely." };

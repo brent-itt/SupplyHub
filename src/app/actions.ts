@@ -117,6 +117,9 @@ export async function saveItemAction(_previous: ActionResult, data: FormData): P
     revalidatePath("/inventory");
     if (parsed.data.item_id) revalidatePath(`/inventory/${parsed.data.item_id}`);
     revalidatePath("/reports");
+    revalidatePath("/vip-queue");
+    revalidatePath("/student-logs");
+    revalidatePath("/scan");
   }
   return result;
 }
@@ -143,6 +146,9 @@ export async function recordMovementAction(_previous: ActionResult, data: FormDa
     revalidatePath("/inventory");
     revalidatePath(`/inventory/${parsed.data.item_id}`);
     revalidatePath("/reports");
+    revalidatePath("/vip-queue");
+    revalidatePath("/student-logs");
+    revalidatePath("/scan");
     revalidatePath("/");
   }
   return result;
@@ -181,6 +187,9 @@ export async function archiveItemAction(_previous: ActionResult, data: FormData)
     revalidatePath("/inventory");
     revalidatePath(`/inventory/${parsed.data.item_id}`);
     revalidatePath("/reports");
+    revalidatePath("/vip-queue");
+    revalidatePath("/student-logs");
+    revalidatePath("/scan");
   }
   return result;
 }
@@ -244,6 +253,9 @@ export async function reviewRequisitionAction(_previous: ActionResult, data: For
     revalidatePath("/requisitions");
     revalidatePath("/inventory");
     revalidatePath("/reports");
+    revalidatePath("/vip-queue");
+    revalidatePath("/student-logs");
+    revalidatePath("/scan");
   }
   return result;
 }
