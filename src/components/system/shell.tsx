@@ -11,7 +11,7 @@ export function UniversityBrand() {
 }
 
 export function PublicHeader({ profile }: { profile?: Profile | null }) {
-  return <header className="sys-public-header"><UniversityBrand/><nav aria-label="Portal navigation"><Link href="/">Home</Link><Link href="/dashboard" className="sys-button sys-button-small">{profile ? "My dashboard" : "Sign in"}<Icon name="arrow" size={16}/></Link></nav></header>;
+  return <header className="sys-public-header"><UniversityBrand/><nav aria-label="Portal navigation"><Link href="/">Home</Link>{profile?.is_active && <Link href="/dashboard" className="sys-button sys-button-small">My dashboard<Icon name="arrow" size={16}/></Link>}</nav></header>;
 }
 
 export function SystemShell({ profile, children, action }: { profile: Profile; children: ReactNode; action: () => Promise<void> }) {

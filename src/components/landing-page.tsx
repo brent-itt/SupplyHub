@@ -142,7 +142,6 @@ export default function LandingPage({ stockContent }: { stockContent: ReactNode 
               About
             </button>
             <Link className="nav-link" href="/form">Student form</Link>
-            <Link className="nav-link" href="/login">Staff sign in</Link>
           </nav>
         </div>
       </header>
@@ -164,7 +163,7 @@ export default function LandingPage({ stockContent }: { stockContent: ReactNode 
               </h1>
               <p>
                 Browse selected university supplies and their current stock.
-                <br className="wide-break" /> Staff can sign in to view supplies and submit requests.
+                <br className="wide-break" /> Check availability or complete your student stock-out form.
               </p>
               <Link
                 className="stocks-button"
@@ -282,7 +281,7 @@ export default function LandingPage({ stockContent }: { stockContent: ReactNode 
                 <FeatureIcon kind={dialogContent} />
               </span>
               <h3>View current supply availability</h3>
-              <p>Scan a category’s QR code on this page to view selected supplies and current availability. Staff can sign in to submit supply requests.</p>
+              <p>Scan a category’s QR code on this page to view selected supplies and current availability.</p>
               <Link className="dialog-done" href="#available-stock" onClick={() => dialogRef.current?.close()}>View available stock</Link>
             </>
           )}

@@ -11,6 +11,12 @@ npm run dev
 
 Open http://localhost:3000. On Windows PowerShell, use `npm.cmd` if execution policy blocks `npm.ps1`.
 
+## Staff sign-in
+
+The public landing page and stock pages do not link to staff sign-in. Authorized staff should bookmark `/login` (production: https://supplyhub-pu.vercel.app/login). The sign-in page requests that search engines do not index it.
+
+Knowing the sign-in URL does not grant access: protected pages and server actions require an authenticated, active account, with role checks for restricted operations. A Super Admin must authorize staff accounts. Keep public email sign-ups disabled in Supabase as described below.
+
 ## Connect Supabase
 
 1. Create a Supabase project and run the migration files in `supabase/migrations` in timestamp order in its SQL Editor.
