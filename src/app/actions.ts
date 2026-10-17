@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { authorizeMutation, getAuthContext, UserFacingError } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { getSupabaseConfig } from "@/lib/supabase/config";
+import { authStorageKey, isSessionCookie, rememberCookieName } from "@/lib/supabase/session-cookies";
 import {
   accessSchema,
   accountSchema,
@@ -56,7 +58,7 @@ export async function signInAction(_previous: ActionResult, data: FormData): Pro
   const parsed = signInSchema.safeParse(formObject(data));
   if (!parsed.success) return { error: validationMessage(parsed.error) };
 
-  const supabase = await createSupabaseServer();
+  const supabase = await createSupabaseServer({ rememberMe: data.get("remember_me") === "on" });
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: "Sign-in failed. Check your email and password." };
 
@@ -66,9 +68,20 @@ export async function signInAction(_previous: ActionResult, data: FormData): Pro
 }
 
 export async function signOutAction() {
-  const context = await getAuthContext();
-  if (context) await context.supabase.auth.signOut();
-  redirect("/");
+  const config = getSupabaseConfig();
+  if (config) {
+    try {
+      const supabase = await createSupabaseServer();
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // Always clear this browser's session, even when Auth is unreachable.
+    }
+    const cookieStore = await cookies();
+    const storageKey = authStorageKey(config.url);
+    cookieStore.getAll().filter(({ name }) => isSessionCookie(name, storageKey) || name === rememberCookieName(storageKey))
+      .forEach(({ name }) => cookieStore.set(name, "", { path: "/", maxAge: 0 }));
+  }
+  redirect("/login");
 }
 
 export async function requestPasswordResetAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {

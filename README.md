@@ -17,6 +17,8 @@ The public landing page and stock pages do not link to staff sign-in. Authorized
 
 Knowing the sign-in URL does not grant access: protected pages and server actions require an authenticated, active account, with role checks for restricted operations. A Super Admin must authorize staff accounts. Keep public email sign-ups disabled in Supabase as described below.
 
+Staff sign-in includes an unchecked **Remember me** option. Checked sessions use cookies retained for 30 days, renewed when the session refreshes; unchecked sessions use browser-session cookies. The choice is respected by server, proxy, and browser refreshes. Browser session-restore settings may restore temporary cookies, so explicitly sign out on shared devices. Signing out clears this browser's authentication cookies and preference in either mode, including when the authentication service is unavailable. Passwords are never saved by this feature.
+
 ## Connect Supabase
 
 1. Create a Supabase project and run the migration files in `supabase/migrations` in timestamp order in its SQL Editor.

@@ -13,6 +13,8 @@ export function SignInForm({ action, next }: { action: FormAction; next: string 
     <input type="hidden" name="next" value={next}/>
     <Field label="Email address"><input className="sys-input" name="email" type="email" autoComplete="username" maxLength={254} required/></Field>
     <Field label="Password"><input className="sys-input" name="password" type="password" autoComplete="current-password" maxLength={128} required/></Field>
+    <label className="sys-remember-me"><input type="checkbox" name="remember_me" value="on" aria-describedby="remember-me-hint"/><span>Remember me</span></label>
+    <p className="sys-form-hint" id="remember-me-hint">Keep me signed in on this device. Signing out always requires you to sign in again.</p>
   </ActionForm>;
 }
 

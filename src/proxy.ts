@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "@/lib/supabase/config";
+import { authStorageKey, isSessionCookie, prepareAuthCookies, rememberCookieName } from "@/lib/supabase/session-cookies";
 
 function isInvalidSession(error: unknown) {
   if (isAuthSessionMissingError(error)) return true;
@@ -17,10 +18,12 @@ export async function proxy(request: NextRequest) {
   // The callback exchanges a fresh code itself. Refreshing an old session here
   // can delete the PKCE verifier needed by that exchange.
   if (request.nextUrl.pathname === "/auth/callback") return response;
+  const storageKey = authStorageKey(config.url);
   const supabase = createServerClient(config.url, config.key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet) {
+        cookiesToSet = prepareAuthCookies(cookiesToSet, storageKey, request.cookies.get(rememberCookieName(storageKey))?.value === "1");
         const previousCookies = response.cookies.getAll();
         cookiesToSet.forEach(({ name, value, options }) => {
           if (options.maxAge === 0) request.cookies.delete(name);
@@ -44,11 +47,8 @@ export async function proxy(request: NextRequest) {
   }
   if (isInvalidSession(authError)) {
     // Clear only this project's session and its chunks, keeping unrelated cookies.
-    const storageKey = `sb-${new URL(config.url).hostname.split(".")[0]}-auth-token`;
     const staleCookies = request.cookies.getAll().filter(({ name }) =>
-      name === storageKey || name === `${storageKey}-user` ||
-      (name.startsWith(`${storageKey}.`) && /^\d+$/.test(name.slice(storageKey.length + 1))) ||
-      (name.startsWith(`${storageKey}-user.`) && /^\d+$/.test(name.slice(storageKey.length + 6)))
+      isSessionCookie(name, storageKey) || name === rememberCookieName(storageKey)
     );
     staleCookies.forEach(({ name }) => request.cookies.delete(name));
     const previousCookies = response.cookies.getAll();

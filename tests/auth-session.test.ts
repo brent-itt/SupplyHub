@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { NextRequest } from "next/server";
 import { proxy } from "../src/proxy";
+import { REMEMBER_MAX_AGE, rememberCookieName } from "../src/lib/supabase/session-cookies";
 
 const cookieName = "sb-session-test-auth-token";
 const user = { id: "10000000-0000-4000-8000-000000000001", aud: "authenticated", role: "authenticated", email: "staff@example.test", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
@@ -10,11 +11,11 @@ function sessionCookie(expiresAt: number) {
   const token = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: user.id, exp: expiresAt, iat: expiresAt - 3600, aud: "authenticated" })}.c2lnbmF0dXJl`;
   return { access_token: token, refresh_token: "test-refresh-token", expires_at: expiresAt, expires_in: 3600, token_type: "bearer", user };
 }
-function request(path = "/inventory?category=Paper", method = "GET") {
+function request(path = "/inventory?category=Paper", method = "GET", remember?: string) {
   const value = "base64-" + Buffer.from(JSON.stringify(sessionCookie(1))).toString("base64url");
   const middle = Math.floor(value.length / 2);
   return new NextRequest(`http://localhost:3000${path}`, { method, headers: {
-    cookie: `${cookieName}.0=${value.slice(0, middle)}; ${cookieName}.1=${value.slice(middle)}; ${cookieName}-code-verifier=keep-verifier; theme=dark; sb-other-auth-token=keep-other`,
+    cookie: `${cookieName}.0=${value.slice(0, middle)}; ${cookieName}.1=${value.slice(middle)}; ${cookieName}-code-verifier=keep-verifier; theme=dark; sb-other-auth-token=keep-other${remember === undefined ? "" : `; ${rememberCookieName(cookieName)}=${remember}`}`,
   } });
 }
 
@@ -39,7 +40,7 @@ test("invalid sessions clear cookies, redirect once, and preserve fresh auth flo
   });
   for (const code of ["refresh_token_not_found", "refresh_token_already_used", "session_not_found", "session_expired"]) {
     errorCode = code;
-    const req = request();
+    const req = request(undefined, undefined, "1");
     const response = await proxy(req);
     assert.equal(response.status, 307);
     const location = new URL(response.headers.get("location")!);
@@ -55,6 +56,7 @@ test("invalid sessions clear cookies, redirect once, and preserve fresh auth flo
       assert.equal(response.cookies.has(name), false);
     }
     assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+    assert.equal(response.cookies.get(rememberCookieName(cookieName))?.maxAge, 0);
     const callsBefore = refreshCalls;
     const nextResponse = await proxy(new NextRequest(location, { headers: { cookie: req.cookies.toString() } }));
     assert.equal(nextResponse.status, 200, "The cleaned login request must not redirect again");
@@ -84,6 +86,14 @@ test("invalid sessions clear cookies, redirect once, and preserve fresh auth flo
   const refreshed = await proxy(request());
   assert.equal(refreshed.status, 200, "Successful refresh must continue to the requested page");
   assert.ok(refreshed.cookies.getAll().some(cookie => cookie.name.startsWith(cookieName) && cookie.value && cookie.maxAge !== 0));
+  for (const preference of [undefined, "0", "1"]) {
+    const response = await proxy(request(undefined, undefined, preference));
+    const session = response.cookies.get(cookieName)!;
+    assert.ok(session?.value, "Refreshed session must be written");
+    assert.equal(session.maxAge, preference === "1" ? REMEMBER_MAX_AGE : undefined);
+    if (preference !== "1") assert.equal(session.expires, undefined, "Unchecked sessions must not gain a persistent expiry during refresh");
+    assert.equal(response.cookies.get(rememberCookieName(cookieName))?.value, preference === "1" ? "1" : "0");
+  }
 
   fetchMock.mock.mockImplementation(async () => new Response(JSON.stringify({ message: "Temporarily unavailable" }), { status: 503, headers: { "Content-Type": "application/json" } }));
   const unavailableRequest = request();
