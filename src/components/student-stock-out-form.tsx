@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { submitStudentStockOut } from "@/app/student-stock-out-actions";
 import { formatRequestDate } from "@/lib/requisitions";
 import type { StudentFormItem, StudentSubmissionResult } from "@/lib/student-stock-out";
+import { StudentItemPicker } from "@/components/student-item-picker";
 
 export function StudentStockOutForm({ items, defaultDate, submissionId, available }: { items: StudentFormItem[]; defaultDate: string; submissionId: string; available: boolean }) {
   const [state, action, pending] = useActionState<StudentSubmissionResult, FormData>(submitStudentStockOut, {});
@@ -37,7 +38,7 @@ export function StudentStockOutForm({ items, defaultDate, submissionId, availabl
         <label className="sys-field"><span>Date</span><input className="sys-input" type="date" name="receipt_date" required min="0001-01-01" max="9999-12-31" defaultValue={defaultDate}/></label>
         <label className="sys-field"><span>Receipt number</span><input className="sys-input" name="receipt_number" placeholder="Number on your receipt" required maxLength={160}/></label>
       </div>
-      <label className="sys-field"><span>What item are you collecting?</span><select className="sys-select" name="item_id" required defaultValue=""><option value="" disabled>Choose an item</option>{items.map(item => <option key={item.id} value={item.id}>{item.name} · {item.sku} ({item.unit})</option>)}</select></label>
+      <StudentItemPicker items={items} disabled={pending || !available}/>
       <label className="sys-field"><span>Quantity</span><input className="sys-input" type="number" inputMode="numeric" name="quantity" min={1} max={2147483647} step={1} defaultValue={1} required/><small>Use the unit shown beside the selected item. Submit a separate form for each different item.</small></label>
     </fieldset>
     <p className="sys-form-hint">Your name, email, and receipt details are visible only to authorized Supplies Office staff and administrators. Please check them before submitting.</p>

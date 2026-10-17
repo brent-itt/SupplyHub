@@ -39,8 +39,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     <PageHeading eyebrow="SUPPLIES OFFICE" title={archived ? "Archived supplies" : "Inventory"} description="Search supplies, review stock levels, and open an item to view or manage its record." actions={<>{!archived && <Link className="sys-button sys-button-secondary" href="/scan">Stock out supplies</Link>}{isManager(profile.role) && <Link className="sys-button" href="/inventory/new">Add supply item</Link>}{isManager(profile.role) && <Link className="sys-button sys-button-secondary" href={archived ? "/inventory" : "/inventory?archived=true"}>{archived ? "Active inventory" : "Archived supplies"}</Link>}</>}/>
     <section className="sys-card sys-card-flush" aria-label="Supply items">
       <div className="sys-card-header"><div><h2>{count ?? items.length} {archived ? "archived" : "available"} supply records</h2><p>Stock quantities update when a transaction is recorded.</p></div></div>
-      <Form className="sys-toolbar" action="/inventory">
-        <label className="sys-search"><span className="sys-sr-only">Search supplies</span><input className="sys-input" name="q" defaultValue={term} placeholder="Search name, code, or description"/></label>
+      <Form className="sys-toolbar inventory-filters" action="/inventory">
+        <label className="sys-field inventory-search"><span>Search supplies</span><input className="sys-input" name="q" defaultValue={term} placeholder="Search name, code, or description"/></label>
         {archived && <input type="hidden" name="archived" value="true"/>}
         <label className="sys-field"><span>Category</span><input className="sys-input" name="category" defaultValue={category} placeholder="All categories" maxLength={80}/></label>
         <button className="sys-button sys-button-secondary" type="submit">Apply filters</button>
