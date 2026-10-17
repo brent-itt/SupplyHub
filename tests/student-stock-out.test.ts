@@ -11,6 +11,11 @@ import { studentFormQR } from "../src/lib/student-form-qr";
 test("student form validates required fields and QR codes open the public form", async () => {
   const input = { submission_id: randomUUID(), student_name: "  Maria Santos  ", student_email: "Maria@example.test", receipt_date: "2026-10-04", receipt_number: "OR-001", item_id: randomUUID(), quantity: "2" };
   assert.equal(studentStockOutSchema.parse(input).student_name, "Maria Santos");
+  for (const field of ["student_name", "student_email", "receipt_date", "receipt_number", "item_id", "quantity"]) {
+    for (const blank of [undefined, null, "", " \t "]) {
+      assert.equal(studentStockOutSchema.safeParse({ ...input, [field]: blank }).success, false, `${field} must reject missing, blank, or spaces-only values`);
+    }
+  }
   for (const invalid of [{ student_email: "bad-email" }, { student_email: "" }, { student_name: " " }, { receipt_number: "" }, { receipt_date: "2026-02-30" }, { receipt_date: "0000-01-01" }, { quantity: "0" }, { quantity: "1.5" }, { item_id: "fake" }]) {
     assert.equal(studentStockOutSchema.safeParse({ ...input, ...invalid }).success, false);
   }

@@ -29,14 +29,15 @@ export function StudentStockOutForm({ items, defaultDate, submissionId, availabl
     </section>;
   }
   return <form className="sys-form student-public-form" action={action} aria-busy={pending} onReset={event => event.preventDefault()}>
+    <p className="sys-form-hint">All fields are required. Complete every field before sending your form.</p>
     <input type="hidden" name="submission_id" value={submissionId}/>
     <div className="student-form-trap" aria-hidden="true"><label>Leave this blank<input name="website" tabIndex={-1} autoComplete="off"/></label></div>
     <fieldset className="sys-form-fields" disabled={pending || !available}>
-      <label className="sys-field"><span>Full name</span><input className="sys-input" name="student_name" autoComplete="name" placeholder="Enter your full name" required minLength={2} maxLength={160}/></label>
+      <label className="sys-field"><span>Full name</span><input className="sys-input" name="student_name" autoComplete="name" placeholder="Enter your full name" required minLength={2} maxLength={160} pattern={".*\\S.*"} title="Enter your full name. Spaces alone are not accepted."/></label>
       <label className="sys-field"><span>Email address</span><input className="sys-input" type="email" name="student_email" autoComplete="email" placeholder="you@example.com" required maxLength={254}/><small>The Supplies Office can use this email to contact you about your collection.</small></label>
       <div className="sys-form-grid">
         <label className="sys-field"><span>Date</span><input className="sys-input" type="date" name="receipt_date" required min="0001-01-01" max="9999-12-31" defaultValue={defaultDate}/></label>
-        <label className="sys-field"><span>Receipt number</span><input className="sys-input" name="receipt_number" placeholder="Number on your receipt" required maxLength={160}/></label>
+        <label className="sys-field"><span>Receipt number</span><input className="sys-input" name="receipt_number" placeholder="Number on your receipt" required maxLength={160} pattern={".*\\S.*"} title="Enter your receipt number. Spaces alone are not accepted."/></label>
       </div>
       <StudentItemPicker items={items} disabled={pending || !available}/>
       <label className="sys-field"><span>Quantity</span><input className="sys-input" type="number" inputMode="numeric" name="quantity" min={1} max={2147483647} step={1} defaultValue={1} required/><small>Use the unit shown beside the selected item. Submit a separate form for each different item.</small></label>
