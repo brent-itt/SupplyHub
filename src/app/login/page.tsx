@@ -27,7 +27,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <p>Sign in with an account authorized by the Panpacific University Supplies Office.</p>
       {query.notice === "auth_error" && <div className="sys-notice sys-notice-error" role="alert"><p>The sign-in link expired or could not be verified. Request a fresh link and try again.</p></div>}
       {query.notice === "session_expired" && <div className="sys-notice" role="status"><p>Your session has expired. Please sign in again.</p></div>}
-      {query.notice === "email_verified" && <div className="sys-notice sys-notice-success" role="status"><p>Email verified. You can now sign in with your email and password.</p></div>}
+      {query.notice === "email_verified" && <div className="sys-notice sys-notice-success" role="status"><p>Email verified. Sign in with your email and password. New accounts also need activation by the Supplies Office before accessing the system.</p></div>}
       <SignInForm action={signInAction} next={next}/>
       <p><Link className="sys-link" href="/forgot-password">Forgot your password?</Link></p>
       <p><Link className="sys-link" href="/verify-email">Resend verification email</Link></p>

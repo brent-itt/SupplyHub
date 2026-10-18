@@ -9,7 +9,7 @@
 
 Accounts are inactive by default. Only an active super admin can approve accounts and change roles. Auth metadata such as `role` or `is_active` is ignored. There are no production demo accounts, sample balances, or automatic elevated users.
 
-Accounts created in the application's **User access** screen are approved by the super admin but must verify their email before use. Apply `202610180001_require_verified_email.sql` and follow [email verification setup](../docs/email-verification.md) to enable email confirmation, configure Auth SMTP, and set the site/redirect URLs. Previously confirmed accounts keep their existing status.
+Accounts created in the application's **User access** screen remain inactive and show **Pending email verification** until the owner confirms their inbox. A super admin can then activate the account. Apply `202610180001_require_verified_email.sql` followed by `202610180002_pending_account_verification.sql`, and follow [email verification setup](../docs/email-verification.md) to configure Auth SMTP and site/redirect URLs. The second migration deactivates unconfirmed accounts; previously confirmed accounts keep their existing status.
 
 ## Access rules
 

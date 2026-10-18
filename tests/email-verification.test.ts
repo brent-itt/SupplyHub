@@ -40,6 +40,7 @@ test("account creation requires email verification and handles partial failures 
   assert.deepEqual(calls.map(call => call.path), ["/auth/v1/admin/users", "/rest/v1/rpc/set_user_access", "/auth/v1/resend"]);
   assert.equal(calls[0].body.email_confirm, false);
   assert.equal(calls[0].body.email, account.email);
+  assert.equal(calls[1].body.p_is_active, false, "New accounts must remain inactive until verification and approval");
   assert.equal(calls[2].body.type, "signup");
   assert.equal(calls[2].body.code_challenge, null, "Confirmation must work on the recipient's browser");
   for (const [stage, message, count] of [["create", /already exists/, 1], ["access", /access could not be assigned/, 2], ["mail", /account was created.*could not be sent/, 3]] as const) {

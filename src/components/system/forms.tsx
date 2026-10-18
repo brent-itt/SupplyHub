@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type ReactNode } from "react";
-import { roleLabels, type ActionResult, type FormAction, type Item, type MovementKind, type Profile, type Requisition, type RequisitionItem, type Role } from "@/lib/types";
+import { roleLabels, type AccountProfile, type ActionResult, type FormAction, type Item, type MovementKind, type Requisition, type RequisitionItem, type Role } from "@/lib/types";
 import { ActionForm } from "./action-form";
 import { matchingSupplyNames } from "@/lib/requisitions";
 
@@ -103,11 +103,12 @@ export function CancelRequestForm({ action, requestId }: { action: FormAction; r
   return <ActionForm action={action} submitLabel="Cancel requisition" pendingLabel="Cancelling…" className="sys-compact-form" confirmMessage="Cancel this requisition? It will no longer be sent for approval."><input type="hidden" name="request_id" value={requestId}/></ActionForm>;
 }
 
-export function UserAccessForm({ action, user, currentUserId }: { action: FormAction; user: Profile; currentUserId: string }) {
+export function UserAccessForm({ action, user, currentUserId }: { action: FormAction; user: AccountProfile; currentUserId: string }) {
   if (user.id === currentUserId) return <p className="sys-form-hint">This is your account. Your own role and access cannot be changed here.</p>;
   return <ActionForm action={action} submitLabel="Save access" pendingLabel="Updating…" className="sys-access-form" confirmMessage={`Update access for ${user.full_name || user.email}?`}>
     <input type="hidden" name="user_id" value={user.id}/>
-    <div className="sys-form-grid"><Field label="Role"><Roles defaultValue={user.role}/></Field><Field label="Account access"><select className="sys-select" name="is_active" defaultValue={String(user.is_active)}><option value="true">Active</option><option value="false">Deactivated</option></select></Field></div>
+    <div className="sys-form-grid"><Field label="Role"><Roles defaultValue={user.role}/></Field><Field label="Account access"><select key={`${user.email_verified}-${user.is_active}`} className="sys-select" name="is_active" defaultValue={String(user.email_verified && user.is_active)}><option value="true" disabled={!user.email_verified}>Active</option><option value="false">{user.email_verified ? "Deactivated" : "Pending email verification"}</option></select></Field></div>
+    {!user.email_verified && <p className="sys-form-hint">The owner must confirm the emailed link before this account can be activated.</p>}
   </ActionForm>;
 }
 
@@ -117,7 +118,7 @@ export function CreateAccountForm({ action }: { action: FormAction }) {
     <Field label="Email address" hint="Use an inbox the account owner can access. Verification is required."><input className="sys-input" name="email" required type="email" maxLength={254} autoComplete="email" placeholder="name@university.edu.ph"/></Field>
     <Field label="Role"><Roles/></Field>
     <Field label="Temporary password" hint="Use at least 12 characters. Share it securely with the account owner."><input className="sys-input" name="password" type="password" required minLength={12} maxLength={128} autoComplete="new-password"/></Field>
-    <p className="sys-form-hint">We will email a verification link. The account owner must confirm their email before signing in, then can change their temporary password.</p>
+    <p className="sys-form-hint">We will email a verification link. The account stays pending until the owner confirms their email and you activate it in User access.</p>
   </ActionForm>;
 }
 

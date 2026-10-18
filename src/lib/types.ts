@@ -11,6 +11,10 @@ export interface Profile {
   created_at: string;
 }
 
+export interface AccountProfile extends Profile {
+  email_verified: boolean;
+}
+
 export interface Item {
   id: string;
   sku: string;

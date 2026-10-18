@@ -35,7 +35,7 @@ export async function createAccountWithVerification(
   });
   if (error || !data.user) throw new Error(error?.message || "The account could not be created.");
   const { error: accessError } = await actor.rpc("set_user_access", {
-    p_user_id: data.user.id, p_role: account.role, p_is_active: true,
+    p_user_id: data.user.id, p_role: account.role, p_is_active: false,
   });
   if (accessError) throw new Error("The account was created, but access could not be assigned. Update it in User access, then resend verification from the sign-in page.");
   try {
@@ -44,5 +44,5 @@ export async function createAccountWithVerification(
   } catch {
     throw new Error("The account was created, but the verification email could not be sent. Use Resend verification email on the sign-in page. If it keeps failing, check Supabase Auth email delivery settings.");
   }
-  return `Account created for ${account.full_name}. A verification email has been requested for ${account.email}. They must confirm their email before signing in. Share the temporary password securely.`;
+  return `Pending account saved for ${account.full_name}. A verification email has been requested for ${account.email}. They must confirm their email before you can activate the account in User access. Share the temporary password securely.`;
 }
