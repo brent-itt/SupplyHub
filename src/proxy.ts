@@ -15,9 +15,12 @@ export async function proxy(request: NextRequest) {
   response.headers.set("Cache-Control", "private, no-store");
   const config = getSupabaseConfig();
   if (!config) return response;
-  // The callback exchanges a fresh code itself. Refreshing an old session here
+  // The callback establishes a fresh session itself. Refreshing an old session here
   // can delete the PKCE verifier needed by that exchange.
-  if (request.nextUrl.pathname === "/auth/callback" || request.nextUrl.pathname === "/auth/confirm") return response;
+  if (request.nextUrl.pathname === "/auth/callback" || request.nextUrl.pathname === "/auth/confirm") {
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
+  }
   const storageKey = authStorageKey(config.url);
   const supabase = createServerClient(config.url, config.key, {
     cookies: {

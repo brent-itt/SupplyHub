@@ -8,6 +8,8 @@ export function createSupabaseBrowser() {
   if (!config) throw new Error("Supabase connection has not been configured.");
   const storageKey = authStorageKey(config.url);
   return createBrowserClient(config.url, config.key, {
+    // The callback explicitly handles both legacy PKCE codes and recovery fragments.
+    auth: { detectSessionInUrl: false, autoRefreshToken: false },
     cookies: {
       getAll: () => typeof document === "undefined" ? [] : parseCookieHeader(document.cookie).map(({ name, value }) => ({ name, value: value ?? "" })),
       setAll(cookiesToSet) {

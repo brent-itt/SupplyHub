@@ -4,12 +4,15 @@ import { updatePasswordAction } from "@/app/actions";
 import { PasswordUpdateForm } from "@/components/system/auth-forms";
 import { PublicHeader } from "@/components/system/shell";
 import { getAuthContext } from "@/lib/auth";
+import { hasRecentEmailProof } from "@/lib/account-password";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResetPasswordPage() {
   const context = await getAuthContext();
-  if (!context) redirect("/login");
+  if (!context) redirect("/forgot-password?notice=auth_error");
+  const { data, error } = await context.supabase.auth.getClaims();
+  if (error || !hasRecentEmailProof(data?.claims, context.user.id)) redirect("/forgot-password?notice=auth_error");
   return <div className="sys-auth-page">
     <PublicHeader profile={context.profile}/>
     <main className="sys-auth-card">

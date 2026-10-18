@@ -10,6 +10,8 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createAccountWithVerification, hasVerifiedEmail, verificationClient, verificationRedirect } from "@/lib/email-verification";
 import { authStorageKey, isSessionCookie, rememberCookieName } from "@/lib/supabase/session-cookies";
+import { sendPasswordRecovery } from "@/lib/password-recovery";
+import { hasRecentEmailProof } from "@/lib/account-password";
 import {
   accessSchema,
   accountSchema,
@@ -92,16 +94,13 @@ export async function signOutAction() {
 }
 
 export async function requestPasswordResetAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
-  if (!getSupabaseConfig()) return { error: "The system is not connected yet. Ask the Supplies Office to complete setup." };
+  const config = getSupabaseConfig();
+  if (!config) return { error: "The system is not connected yet. Ask the Supplies Office to complete setup." };
   const parsed = emailSchema.safeParse(formObject(data));
   if (!parsed.success) return { error: validationMessage(parsed.error) };
-  const supabase = await createSupabaseServer();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${siteUrl.replace(/\/$/, "")}/auth/callback?next=%2Freset-password`,
-  });
-  // Keep the response the same for unknown addresses to avoid account enumeration.
-  return { success: "If an account uses that email, a password reset link is on its way." };
+  // A stateless request lets the recipient open the email in a different browser
+  // without a PKCE verifier cookie from the browser that requested the reset.
+  return sendPasswordRecovery(verificationClient(config.url, config.key), parsed.data.email, process.env.NEXT_PUBLIC_SITE_URL);
 }
 
 export async function resendVerificationAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
@@ -128,6 +127,8 @@ export async function updatePasswordAction(_previous: ActionResult, data: FormDa
   if (!parsed.success) return { error: validationMessage(parsed.error) };
   const context = await getAuthContext();
   if (!context) return { error: "Your reset session has expired. Request a new password reset link." };
+  const { data: verified, error: claimsError } = await context.supabase.auth.getClaims();
+  if (claimsError || !hasRecentEmailProof(verified?.claims, context.user.id)) return { error: "Verify a fresh password reset email first, or use the verification code in My account." };
   const { error } = await context.supabase.auth.updateUser({ password: parsed.data });
   if (error) return { error: error.message };
   return { success: "Password updated. Use your new password the next time you sign in." };
