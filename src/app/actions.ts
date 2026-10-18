@@ -8,11 +8,13 @@ import { authorizeMutation, getAuthContext, UserFacingError } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { getSupabaseConfig } from "@/lib/supabase/config";
+import { createAccountWithVerification, hasVerifiedEmail, verificationClient, verificationRedirect } from "@/lib/email-verification";
 import { authStorageKey, isSessionCookie, rememberCookieName } from "@/lib/supabase/session-cookies";
 import {
   accessSchema,
   accountSchema,
   editRequestSchema,
+  emailAddressSchema,
   itemSchema,
   movementSchema,
   passwordSchema,
@@ -24,8 +26,8 @@ import {
 } from "@/lib/validation";
 import type { ActionResult, Role } from "@/lib/types";
 
-const signInSchema = z.object({ email: z.string().trim().email().max(254), password: z.string().min(1).max(128) });
-const emailSchema = z.object({ email: z.string().trim().email().max(254) });
+const signInSchema = z.object({ email: emailAddressSchema, password: z.string().min(1).max(128) });
+const emailSchema = z.object({ email: emailAddressSchema });
 
 function formObject(data: FormData) {
   return Object.fromEntries(data.entries());
@@ -59,8 +61,13 @@ export async function signInAction(_previous: ActionResult, data: FormData): Pro
   if (!parsed.success) return { error: validationMessage(parsed.error) };
 
   const supabase = await createSupabaseServer({ rememberMe: data.get("remember_me") === "on" });
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data: signedIn, error } = await supabase.auth.signInWithPassword(parsed.data);
+  if (error?.code === "email_not_confirmed") return { error: "Verify your email before signing in. Check your inbox or use Resend verification email below." };
   if (error) return { error: "Sign-in failed. Check your email and password." };
+  if (!hasVerifiedEmail(signedIn.user)) {
+    await supabase.auth.signOut({ scope: "local" });
+    return { error: "Verify your email before signing in. Check your inbox or use Resend verification email below." };
+  }
 
   const context = await getAuthContext();
   if (!context?.profile?.is_active) redirect("/access-pending");
@@ -95,6 +102,25 @@ export async function requestPasswordResetAction(_previous: ActionResult, data: 
   });
   // Keep the response the same for unknown addresses to avoid account enumeration.
   return { success: "If an account uses that email, a password reset link is on its way." };
+}
+
+export async function resendVerificationAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
+  const config = getSupabaseConfig();
+  if (!config) return { error: "The system is not connected yet. Ask the Supplies Office to complete setup." };
+  const parsed = emailSchema.safeParse(formObject(data));
+  if (!parsed.success) return { error: validationMessage(parsed.error) };
+  try {
+    const { error } = await verificationClient(config.url, config.key).auth.resend({
+      type: "signup", email: parsed.data.email,
+      options: { emailRedirectTo: verificationRedirect(process.env.NEXT_PUBLIC_SITE_URL) },
+    });
+    if (error && error.code !== "user_not_found" && error.code !== "email_already_confirmed") {
+      return { error: "The verification email could not be sent. Wait a minute and try again, or contact the Supplies Office." };
+    }
+    return { success: "If this email belongs to an account awaiting verification, a confirmation email has been requested. Check your inbox and spam folder." };
+  } catch {
+    return { error: "The verification email could not be sent. Contact the Supplies Office to check email delivery settings." };
+  }
 }
 
 export async function updatePasswordAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
@@ -310,21 +336,16 @@ export async function createAccountAction(_previous: ActionResult, data: FormDat
   const result = await authorizedAction(["super_admin"], async (supabase) => {
     const admin = createSupabaseAdmin();
     if (!admin) throw new Error("Account creation needs SUPABASE_SECRET_KEY. Add it to the server environment, then restart the app.");
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      email_confirm: true,
-      user_metadata: { full_name: parsed.data.full_name },
-    });
-    if (createError || !created.user) throw new Error(createError?.message || "The account could not be created.");
-    const { error: accessError } = await supabase.rpc("set_user_access", {
-      p_user_id: created.user.id,
-      p_role: parsed.data.role,
-      p_is_active: true,
-    });
-    if (accessError) throw new Error(`The account was created but could not be activated: ${accessError.message}`);
-    return `Account created for ${parsed.data.full_name}. Share the temporary password securely.`;
+    const config = getSupabaseConfig()!;
+    const emailRedirectTo = verificationRedirect(process.env.NEXT_PUBLIC_SITE_URL);
+    const mailer = verificationClient(config.url, config.key);
+    try {
+      return await createAccountWithVerification(parsed.data, admin, supabase,
+        email => mailer.auth.resend({ type: "signup", email, options: { emailRedirectTo } }));
+    } finally {
+      // Partial creation also needs to appear in the user list for recovery.
+      revalidatePath("/users");
+    }
   });
-  if (result.success) revalidatePath("/users");
   return result;
 }

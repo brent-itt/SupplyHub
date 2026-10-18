@@ -8,7 +8,7 @@ import { getAuthContext } from "@/lib/auth";
 import { safeNext } from "@/lib/validation";
 
 export const metadata: Metadata = {
-  title: "Staff sign in | SupplyHub",
+  title: "Sign in | SupplyHub",
   robots: { index: false, follow: false },
 };
 
@@ -22,13 +22,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return <div className="sys-auth-page">
     <PublicHeader/>
     <main className="sys-auth-card">
-      <p className="sys-eyebrow">SUPPLIES OFFICE · STAFF PORTAL</p>
-      <h1>Staff sign in</h1>
+      <p className="sys-eyebrow">SUPPLIES OFFICE · PORTAL</p>
+      <h1>Sign in</h1>
       <p>Sign in with an account authorized by the Panpacific University Supplies Office.</p>
       {query.notice === "auth_error" && <div className="sys-notice sys-notice-error" role="alert"><p>The sign-in link expired or could not be verified. Request a fresh link and try again.</p></div>}
       {query.notice === "session_expired" && <div className="sys-notice" role="status"><p>Your session has expired. Please sign in again.</p></div>}
+      {query.notice === "email_verified" && <div className="sys-notice sys-notice-success" role="status"><p>Email verified. You can now sign in with your email and password.</p></div>}
       <SignInForm action={signInAction} next={next}/>
       <p><Link className="sys-link" href="/forgot-password">Forgot your password?</Link></p>
+      <p><Link className="sys-link" href="/verify-email">Resend verification email</Link></p>
     </main>
   </div>;
 }

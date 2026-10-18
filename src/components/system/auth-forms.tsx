@@ -2,6 +2,8 @@
 
 import type { FormAction } from "@/lib/types";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ActionForm } from "./action-form";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -20,6 +22,21 @@ export function SignInForm({ action, next }: { action: FormAction; next: string 
 
 export function PasswordResetRequestForm({ action }: { action: FormAction }) {
   return <ActionForm action={action} submitLabel="Send reset link" pendingLabel="Sending…">
+    <Field label="Email address"><input className="sys-input" name="email" type="email" autoComplete="email" maxLength={254} required/></Field>
+  </ActionForm>;
+}
+
+export function VerificationEmailForm({ action }: { action: FormAction }) {
+  const router = useRouter();
+  useEffect(() => {
+    // Support Supabase's default confirmation template as well as token-hash
+    // links. Never store the implicit session or replace another signed-in user.
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    if (!hash.has("access_token") && !hash.has("error")) return;
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    router.replace(hash.has("error") ? "/verify-email?notice=auth_error" : "/login?notice=email_verified");
+  }, [router]);
+  return <ActionForm action={action} submitLabel="Resend verification email" pendingLabel="Sending…">
     <Field label="Email address"><input className="sys-input" name="email" type="email" autoComplete="email" maxLength={254} required/></Field>
   </ActionForm>;
 }

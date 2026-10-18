@@ -46,7 +46,8 @@ export const editRequestSchema = requestSchema.extend({ request_id: uuid, expect
 export const reviewSchema = z.object({ request_id: uuid, expected_version: positiveInteger, decision: z.enum(["approved", "rejected"]), review_note: text(2000) });
 export const accessSchema = z.object({ user_id: uuid, role: roleSchema, is_active: z.enum(["true", "false"]).transform(value => value === "true") });
 export const passwordSchema = z.string().min(12, "Use at least 12 characters.").max(128);
-export const accountSchema = z.object({ email: z.string().trim().email().max(254), full_name: text(160).min(2), password: passwordSchema, role: roleSchema });
+export const emailAddressSchema = z.string().trim().toLowerCase().email("Enter a valid email address, such as name@example.com.").max(254, "Email addresses must be 254 characters or fewer.");
+export const accountSchema = z.object({ email: emailAddressSchema, full_name: text(160).min(2), password: passwordSchema, role: roleSchema });
 
 export function safeNext(value: unknown, fallback = "/dashboard") {
   if (typeof value !== "string" || !/^\/(?:dashboard|inventory|requisitions|student-logs|reports|scan|users|account)(?:[/?]|$)/.test(value) || /[\\\r\n]/.test(value)) return fallback;

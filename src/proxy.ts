@@ -17,7 +17,7 @@ export async function proxy(request: NextRequest) {
   if (!config) return response;
   // The callback exchanges a fresh code itself. Refreshing an old session here
   // can delete the PKCE verifier needed by that exchange.
-  if (request.nextUrl.pathname === "/auth/callback") return response;
+  if (request.nextUrl.pathname === "/auth/callback" || request.nextUrl.pathname === "/auth/confirm") return response;
   const storageKey = authStorageKey(config.url);
   const supabase = createServerClient(config.url, config.key, {
     cookies: {

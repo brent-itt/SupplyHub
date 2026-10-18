@@ -114,10 +114,10 @@ export function UserAccessForm({ action, user, currentUserId }: { action: FormAc
 export function CreateAccountForm({ action }: { action: FormAction }) {
   return <ActionForm action={action} submitLabel="Create account" pendingLabel="Creating account…">
     <Field label="Full name"><input className="sys-input" name="full_name" required minLength={2} maxLength={160} autoComplete="name" placeholder="Enter the user's full name"/></Field>
-    <Field label="Email address"><input className="sys-input" name="email" required type="email" maxLength={254} autoComplete="email" placeholder="name@university.edu.ph"/></Field>
+    <Field label="Email address" hint="Use an inbox the account owner can access. Verification is required."><input className="sys-input" name="email" required type="email" maxLength={254} autoComplete="email" placeholder="name@university.edu.ph"/></Field>
     <Field label="Role"><Roles/></Field>
     <Field label="Temporary password" hint="Use at least 12 characters. Share it securely with the account owner."><input className="sys-input" name="password" type="password" required minLength={12} maxLength={128} autoComplete="new-password"/></Field>
-    <p className="sys-form-hint">Create accounts only for verified university users. The account owner can change their password after signing in.</p>
+    <p className="sys-form-hint">We will email a verification link. The account owner must confirm their email before signing in, then can change their temporary password.</p>
   </ActionForm>;
 }
 
