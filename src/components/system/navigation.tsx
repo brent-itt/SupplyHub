@@ -2,6 +2,7 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { isManager, type Role } from "@/lib/types";
 import { Icon, type IconName } from "./icons";
 
@@ -10,6 +11,21 @@ function NavigationStatus({ active }: { active: boolean }) {
   return <span className="sys-nav-status">
     {pending ? <span role="status" aria-label="Loading page" className="sys-spinner"/> : active ? <span className="sys-nav-indicator"/> : null}
   </span>;
+}
+
+function NavigationLink({ href, label, icon, active }: { href: string; label: string; icon: IconName; active: boolean }) {
+  const [prefetch, setPrefetch] = useState(false);
+  const prepareNavigation = () => setPrefetch(true);
+
+  return <Link
+    href={href}
+    prefetch={prefetch && !active}
+    onMouseEnter={prepareNavigation}
+    onFocus={prepareNavigation}
+    onTouchStart={prepareNavigation}
+    className={`sys-nav-link${active ? " sys-nav-link-active" : ""}`}
+    aria-current={active ? "page" : undefined}
+  ><Icon name={icon}/><span>{label}</span><NavigationStatus active={active}/></Link>;
 }
 
 export function SystemNavigation({ role }: { role: Role }) {
@@ -28,6 +44,6 @@ export function SystemNavigation({ role }: { role: Role }) {
 
   return <nav className="sys-navigation" aria-label="Supplies management">{links.map(({ href, label, icon }) => {
     const active = pathname === href || pathname.startsWith(`${href}/`);
-    return <Link href={href} key={href} className={`sys-nav-link${active ? " sys-nav-link-active" : ""}`} aria-current={active ? "page" : undefined}><Icon name={icon}/><span>{label}</span><NavigationStatus active={active}/></Link>;
+    return <NavigationLink key={href} href={href} label={label} icon={icon} active={active}/>;
   })}</nav>;
 }

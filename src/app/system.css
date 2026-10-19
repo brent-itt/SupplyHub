@@ -220,7 +220,6 @@ textarea.sys-input { resize: vertical; min-height: 95px; }
 .sys-auth-card pre { background: #f3f6f9; padding: 15px; border-radius: 8px; white-space: pre-wrap; word-break: break-word; font-size: 11px; }
 .sys-public-content { max-width: 1200px; padding: 45px 25px; margin-inline: auto; }
 .sys-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sys-spin .7s linear infinite; }
-.sys-loading { display: flex; align-items: center; justify-content: center; min-height: 250px; gap: 12px; color: #789068; font-size: 13px; }
 .sys-barcode-label { text-align: center; padding: 24px; background: white; border: 1px solid #e2e8ed; border-radius: 10px; break-inside: avoid; min-width: 0; }
 .sys-barcode-label img { display: block; margin: auto; max-width: none; height: auto; }
 .sys-barcode-label h2, .sys-barcode-label h3 { font-size: 15px; margin-top: 12px; }
