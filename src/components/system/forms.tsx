@@ -129,6 +129,14 @@ export function CreateAccountForm({ action }: { action: FormAction }) {
   </ActionForm>;
 }
 
+export function RemoveAccountForm({ action, user, currentUserId }: { action: FormAction; user: AccountProfile; currentUserId: string }) {
+  if (user.id === currentUserId) return null;
+  return <ActionForm action={action} submitLabel="Remove account" pendingLabel="Removing…" className="sys-remove-account-form" danger
+    confirmMessage={`Remove the account for ${user.full_name || user.email} (${user.email})? They will no longer be able to sign in. Existing inventory and activity records will be kept. This cannot be undone.`}>
+    <input type="hidden" name="user_id" value={user.id}/>
+  </ActionForm>;
+}
+
 export function PublicVisibilityForm({ action, item }: { action: FormAction; item: Item }) {
   return <ActionForm action={action} submitLabel="Save public display" pendingLabel="Saving…">
     <input type="hidden" name="item_id" value={item.id}/>

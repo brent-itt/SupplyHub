@@ -2,8 +2,8 @@ import { createClient, type SupabaseClient, type User } from "@supabase/supabase
 import type { z } from "zod";
 import type { accountSchema } from "./validation";
 
-export function hasVerifiedEmail(user: Pick<User, "email" | "email_confirmed_at"> | null | undefined) {
-  return Boolean(user?.email && user.email_confirmed_at);
+export function hasVerifiedEmail(user: Pick<User, "email" | "email_confirmed_at" | "deleted_at"> | null | undefined) {
+  return Boolean(user?.email && user.email_confirmed_at && !user.deleted_at);
 }
 
 // No browser storage or cookies: the administrator and recipient may use

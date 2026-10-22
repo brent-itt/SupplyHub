@@ -56,6 +56,7 @@
 .sys-button-secondary:hover { background: #f2f5f9; border-color: #c8d5e1; }
 .sys-button-danger { background: #a8413d; border-color: #a8413d; }
 .sys-button-danger:hover { background: #8f332f; border-color: #8f332f; }
+.sys-remove-account-form { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8ed; }
 .sys-button-small { min-height: 35px; padding: 7px 12px; font-size: 11px; }
 .sys-button-text { background: none; border-color: transparent; color: #4f7e3b; padding-inline: 4px; }
 .sys-button-text:hover { background: #edf4e8; border-color: transparent; }

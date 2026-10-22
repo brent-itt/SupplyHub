@@ -12,6 +12,7 @@ import { createAccountWithVerification, hasVerifiedEmail, verificationClient, ve
 import { authStorageKey, isSessionCookie, rememberCookieName } from "@/lib/supabase/session-cookies";
 import { sendPasswordRecovery } from "@/lib/password-recovery";
 import { hasRecentEmailProof } from "@/lib/account-password";
+import { removeAccount } from "@/lib/account-removal";
 import {
   accessSchema,
   accountSchema,
@@ -322,6 +323,11 @@ export async function updateUserAccessAction(_previous: ActionResult, data: Form
   const parsed = accessSchema.safeParse(formObject(data));
   if (!parsed.success) return { error: validationMessage(parsed.error) };
   const result = await authorizedAction(["super_admin"], async (supabase) => {
+    const admin = createSupabaseAdmin();
+    if (admin) {
+      const { data: account, error } = await admin.auth.admin.getUserById(parsed.data.user_id);
+      if (error || !account.user || account.user.deleted_at) throw new Error("This account is no longer available. Refresh the user list.");
+    }
     const { error } = await supabase.rpc("set_user_access", {
       p_user_id: parsed.data.user_id,
       p_role: parsed.data.role,
@@ -332,6 +338,23 @@ export async function updateUserAccessAction(_previous: ActionResult, data: Form
   });
   if (result.success) revalidatePath("/users");
   return result;
+}
+
+export async function removeAccountAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {
+  const parsed = uuid.safeParse(data.get("user_id"));
+  if (!parsed.success) return { error: validationMessage(parsed.error) };
+  try {
+    const { supabase, profile } = await authorizeMutation(["super_admin"]);
+    const admin = createSupabaseAdmin();
+    if (!admin) return { error: "Account removal needs the server's Supabase secret key. Contact the system administrator." };
+    await removeAccount(profile, parsed.data, supabase, admin);
+  } catch (error) {
+    return { error: errorMessage(error) };
+  } finally {
+    // A failed Auth request may still have deactivated the profile.
+    revalidatePath("/users");
+  }
+  redirect("/users?notice=removed");
 }
 
 export async function createAccountAction(_previous: ActionResult, data: FormData): Promise<ActionResult> {

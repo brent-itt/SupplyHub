@@ -35,7 +35,9 @@ The database stores integer quantities in each item's unit. `stock_movement` acc
 
 Stock changes lock the item before reading its balance. Approvals lock the requisition and item in one transaction, check current stock, subtract the approved quantity, append a ledger entry, and mark the request processed. A second approval cannot subtract stock twice. Failed changes roll back entirely. Transaction history cannot be updated or deleted; use an adjustment to correct inventory.
 
-Supplies can be archived only at zero stock with no pending requisitions. Archiving retains history. Account changes are serialized, and a super admin cannot disable or demote their own account. Deleting an auth user with a profile/history is restricted; deactivate the account to preserve audit attribution.
+Supplies can be archived only at zero stock with no pending requisitions. Archiving retains history. Account changes are serialized, and a super admin cannot disable or demote their own account.
+
+**User access > Remove account** first deactivates the target through `set_user_access`, then uses the server-only [Supabase Auth soft-delete API](https://supabase.com/docs/reference/javascript/auth-admin-deleteuser) to revoke credentials and sessions. The Auth UUID and profile remain so existing history keeps its attribution; removed accounts are excluded from User access. Super Admins cannot remove themselves. Failed Auth removal leaves access disabled and can be retried. Hard deletion of an Auth row with a profile/history remains restricted. No additional database migration is required for account removal; it uses the existing server secret and account-access RPC.
 
 All application mutations use these public functions:
 
