@@ -10,7 +10,7 @@ const users = {
   admin: "10000000-0000-4000-8000-000000000002",
   staff: "10000000-0000-4000-8000-000000000003",
   otherStaff: "10000000-0000-4000-8000-000000000004",
-  student: "10000000-0000-4000-8000-000000000005",
+  pending: "10000000-0000-4000-8000-000000000005",
   inactive: "10000000-0000-4000-8000-000000000006",
 };
 
@@ -37,10 +37,13 @@ before(async () => {
     "utf8",
   );
   await db.exec(migration);
+  // Exercise the current staff stock-out policy rather than the original
+  // bootstrap function, which predates the stock-in/adjustment restriction.
+  await db.exec(await readFile(new URL("../supabase/migrations/202610040001_staff_stock_out.sql", import.meta.url), "utf8"));
   for (const [name, id] of Object.entries(users)) {
     await db.query("insert into auth.users(id, email) values ($1, $2)", [id, `${name}@university.test`]);
-    const role = name === "super" ? "super_admin" : name === "otherStaff" ? "staff" : name === "inactive" ? "admin" : name;
-    await db.query("update public.profiles set role = $1, is_active = $2 where id = $3", [role, name !== "inactive", id]);
+    const role = name === "super" ? "super_admin" : ["otherStaff", "pending"].includes(name) ? "staff" : name === "inactive" ? "admin" : name;
+    await db.query("update public.profiles set role = $1, is_active = $2 where id = $3", [role, !["inactive", "pending"].includes(name), id]);
   }
 });
 
@@ -83,7 +86,7 @@ test("auth metadata cannot activate or elevate a new account; email updates pres
     id, JSON.stringify({ full_name: "New Student", role: "super_admin", is_active: true }),
   ]);
   let profile = (await asUser(id, "select * from public.profiles"))[0];
-  assert.equal(profile.role, "student");
+  assert.equal(profile.role, "staff");
   assert.equal(profile.is_active, false);
   assert.equal(profile.full_name, "New Student");
   await asUser("super", "select public.set_user_access($1, 'staff', true)", [id]);
@@ -94,11 +97,11 @@ test("auth metadata cannot activate or elevate a new account; email updates pres
   assert.equal(profile.email, "updated@university.test");
 });
 
-test("anonymous, missing-session, inactive, student and staff callers cannot mutate inventory", async () => {
+test("anonymous, missing-session, inactive, pending and staff callers cannot mutate inventory", async () => {
   await assert.rejects(asUser(null, "select * from public.items", [], "anon"), /permission denied/i);
   await assert.rejects(asUser(null, "select public.archive_item($1, true)", [randomUUID()], "anon"), /permission denied/i);
   await assert.rejects(createItem(null), /sign in/i);
-  for (const user of ["inactive", "student", "staff"]) {
+  for (const user of ["inactive", "pending", "staff"]) {
     await assert.rejects(createItem(user), /permission/i);
     await assert.rejects(move(randomUUID(), "stock_in", 1, { user }), /permission/i);
     await assert.rejects(asUser(user, "select public.archive_item($1, true)", [randomUUID()]), /permission/i);
@@ -108,7 +111,7 @@ test("anonymous, missing-session, inactive, student and staff callers cannot mut
 
 test("direct writes are denied even to managers and super admins", async () => {
   const item = await createItem();
-  for (const user of ["student", "staff", "admin", "super"]) {
+  for (const user of ["pending", "staff", "admin", "super"]) {
     await assert.rejects(asUser(user, "update public.items set quantity = 999 where id = $1", [item]), /permission denied/i);
     await assert.rejects(asUser(user, "delete from public.items where id = $1", [item]), /permission denied/i);
     await assert.rejects(asUser(user, "update public.profiles set role = 'super_admin' where id = $1", [users[user]]), /permission denied/i);
@@ -118,20 +121,21 @@ test("direct writes are denied even to managers and super admins", async () => {
   assert.equal(await quantity(item), 0);
 });
 
-test("students see active supplies, managers see archives, and inactive accounts see no inventory", async () => {
+test("staff see active supplies, managers see archives, and pending accounts see no inventory", async () => {
   const visible = await createItem();
   const archived = await createItem();
   await asUser("admin", "select public.archive_item($1, true)", [archived]);
-  const studentItems = await asUser("student", "select id from public.items where id = any($1::uuid[])", [[visible, archived]]);
-  assert.deepEqual(studentItems.map((item) => item.id), [visible]);
+  const staffItems = await asUser("staff", "select id from public.items where id = any($1::uuid[])", [[visible, archived]]);
+  assert.deepEqual(staffItems.map((item) => item.id), [visible]);
+  assert.equal((await asUser("pending", "select id from public.items")).length, 0);
   assert.equal((await asUser("admin", "select id from public.items where id = $1", [archived])).length, 1);
   assert.equal((await asUser("inactive", "select id from public.items")).length, 0);
   assert.equal((await asUser(null, "select id from public.items")).length, 0);
-  const own = await asUser("student", "select id from public.profiles");
-  assert.deepEqual(own.map((profile) => profile.id), [users.student]);
+  const own = await asUser("pending", "select id from public.profiles");
+  assert.deepEqual(own.map((profile) => profile.id), [users.pending]);
   assert.equal((await asUser("inactive", "select id from public.profiles")).length, 1);
   await asUser("admin", "select public.archive_item($1, false)", [archived]);
-  assert.equal((await asUser("student", "select id from public.items where id = $1", [archived])).length, 1);
+  assert.equal((await asUser("staff", "select id from public.items where id = $1", [archived])).length, 1);
 });
 
 test("item edits preserve balance and enforce unique normalized SKUs", async () => {
@@ -156,7 +160,7 @@ test("stock in, out and adjustments produce an immutable, arithmetically consist
   const history = await asUser("admin", "select quantity_delta, balance_after from public.transactions where item_id = $1 order by created_at, id", [item]);
   assert.deepEqual(history.map((row) => row.quantity_delta), [20, -7, -3]);
   assert.deepEqual(history.map((row) => row.balance_after), [20, 13, 10]);
-  assert.equal((await asUser("student", "select * from public.transactions")).length, 0);
+  assert.equal((await asUser("pending", "select * from public.transactions")).length, 0);
   assert.equal((await asUser("staff", "select * from public.transactions")).length, 0);
   // Even privileged SQL edits must explicitly override the immutable trigger.
   await assert.rejects(db.query("update public.transactions set note = 'Rewritten' where item_id = $1", [item]), /immutable/i);
@@ -196,14 +200,14 @@ test("idempotency returns the original movement and rejects altered payloads or 
   await assert.rejects(move(item, "adjustment", 6, { key: adjustKey, note: "Recount" }), /different movement/i);
 });
 
-test("staff requisitions are private, own-cancellable, and not available to students", async () => {
+test("staff requisitions are private, own-cancellable, and not available to pending accounts", async () => {
   const item = await createItem();
   const id = await request(item, 2);
   assert.equal((await asUser("staff", "select id from public.requisitions where id = $1", [id])).length, 1);
   assert.equal((await asUser("otherStaff", "select id from public.requisitions where id = $1", [id])).length, 0);
-  assert.equal((await asUser("student", "select id from public.requisitions where id = $1", [id])).length, 0);
+  assert.equal((await asUser("pending", "select id from public.requisitions where id = $1", [id])).length, 0);
   assert.equal((await asUser("admin", "select id from public.requisitions where id = $1", [id])).length, 1);
-  await assert.rejects(request(item, 1, "student"), /permission/i);
+  await assert.rejects(request(item, 1, "pending"), /permission/i);
   await assert.rejects(request(item, 0), /positive/i);
   await assert.rejects(asUser("otherStaff", "select public.cancel_requisition($1)", [id]), /own requisitions/i);
   await assert.rejects(asUser("staff", "select public.review_requisition($1, 'approved', '')", [id]), /permission/i);
@@ -254,12 +258,12 @@ test("archiving requires zero stock and no pending requests; archived items reje
 });
 
 test("only a super admin can manage access; self-demotion and self-disable are blocked", async () => {
-  for (const user of ["student", "staff", "admin", "inactive"]) {
+  for (const user of ["pending", "staff", "admin", "inactive"]) {
     await assert.rejects(asUser(user, "select public.set_user_access($1, 'super_admin', true)", [users[user]]), /permission/i);
   }
   await assert.rejects(asUser("super", "select public.set_user_access($1, 'admin', true)", [users.super]), /own super admin/i);
   await assert.rejects(asUser("super", "select public.set_user_access($1, 'super_admin', false)", [users.super]), /own super admin/i);
-  await assert.rejects(asUser("super", "select public.set_user_access($1, 'owner', true)", [users.student]), /valid role/i);
+  await assert.rejects(asUser("super", "select public.set_user_access($1, 'owner', true)", [users.pending]), /valid role/i);
   await asUser("super", "select public.set_user_access($1, 'staff', false)", [users.otherStaff]);
   const item = await createItem();
   await assert.rejects(request(item, 1, "otherStaff"), /permission/i);

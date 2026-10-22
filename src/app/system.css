@@ -335,6 +335,9 @@ textarea.sys-input { resize: vertical; min-height: 95px; }
 .dashboard-refresh { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
 .dashboard-refresh p { margin: 6px 0 0; color: #617289; font-size: 12px; }
 .dashboard-analytics { margin-block: 24px; }
+.analytics-report-heading { margin-bottom: 20px; }
+.analytics-report-heading h2 { font-size: 18px; margin-bottom: 8px; }
+.analytics-report-heading p { color: #617289; font-size: 12px; margin: 5px 0; }
 .analytics-breakdown { display: grid; gap: 14px; margin-top: 22px; }
 .analytics-breakdown > div > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
 .analytics-label { text-transform: capitalize; }
@@ -355,5 +358,12 @@ textarea.sys-input { resize: vertical; min-height: 95px; }
 .analytics-movements caption { text-align: left; padding: 12px 0; }
 @media (max-width: 600px) { .analytics-chart { gap: 6px; } .analytics-bars { height: 110px; gap: 3px; } }
 @media print { .dashboard-refresh { display: none; } }
+@media print {
+  .analytics-report-heading { break-after: avoid; }
+  .analytics-report-heading p { color: black; }
+  .dashboard-analytics .sys-card { break-inside: avoid; }
+  .dashboard-analytics { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .analytics-chart, .analytics-legend { break-inside: avoid; }
+}
 @media (prefers-reduced-motion: reduce) { .sys-spinner { animation: none; } }
 @media print { .sys-sidebar,.sys-topbar,.sys-footer,.sys-public-header,.sys-no-print,.sys-page-actions,.sys-filters,.sys-pagination,.sys-form,.sys-skip-link { display: none !important; } .system-shell,.sys-workspace,.sys-main { display: block; background: white; width: 100%; max-width: none; margin: 0; padding: 0; min-height: 0; } .sys-main { color: black; font-size: 10pt; } .sys-card,.sys-panel,.sys-stat-card { box-shadow: none; border-color: #ccc; } .sys-table-wrap { overflow: visible; } .sys-table { font-size: 9pt; } .sys-table th,.sys-table td { padding: 7px 9px; } .sys-table tr,.sys-stat-card,.sys-barcode-label { break-inside: avoid; } .sys-badge { color: black; border: 1px solid #ddd; } .sys-print-only { display: block; } .sys-barcode-label { max-width: 300px; margin: 20px auto; } }

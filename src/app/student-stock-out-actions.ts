@@ -34,6 +34,7 @@ export async function submitStudentStockOut(_previous: StudentSubmissionResult, 
     if (readError) return { error: "Your submission may have been saved. Retry this form to confirm it without creating a duplicate." };
     revalidatePath("/student-logs");
     revalidatePath("/vip-queue");
+    revalidatePath("/inventory");
     revalidatePath("/scan");
     return { submission: saved };
   } catch {
@@ -57,6 +58,7 @@ export async function processStudentStockOut(_previous: ActionResult, data: Form
       if (error) return { error: ["22023", "42501", "P0002"].includes(error.code) ? error.message : "Unable to process this submission. Please try again." };
       revalidatePath("/student-logs");
       revalidatePath("/vip-queue");
+      revalidatePath("/inventory");
       revalidatePath("/scan");
       return { success: "Remaining request rejected. Previously issued stock stays recorded." };
     }

@@ -4,6 +4,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { roleLabels, type AccountProfile, type ActionResult, type FormAction, type Item, type MovementKind, type Requisition, type RequisitionItem, type Role } from "@/lib/types";
 import { ActionForm } from "./action-form";
 import { matchingSupplyNames } from "@/lib/requisitions";
+import { defaultBarcode } from "@/lib/barcode";
 
 function Field({ label, children, hint, wide = false }: { label: string; children: ReactNode; hint?: string; wide?: boolean }) {
   return <label className={`sys-field${wide ? " sys-field-wide" : ""}`}><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
@@ -13,19 +14,25 @@ function Roles({ defaultValue = "staff", disabled = false }: { defaultValue?: Ro
   return <select name="role" className="sys-select" defaultValue={defaultValue} required disabled={disabled}>{Object.entries(roleLabels).map(([role, label]) => <option key={role} value={role}>{label}</option>)}</select>;
 }
 
-export function ItemForm({ action, item }: { action: FormAction; item?: Item }) {
-  return <ActionForm action={action} submitLabel={item ? "Save item details" : "Create supply item"}>
+export function ItemForm({ action, item, defaultCode }: { action: FormAction; item?: Item; defaultCode?: string }) {
+  const [code, setCode] = useState(item?.sku ?? defaultCode ?? "");
+  async function saveItem(previous: ActionResult, data: FormData) {
+    const result = await action(previous, data);
+    if (result.success && !item) setCode(defaultBarcode());
+    return result;
+  }
+  return <ActionForm action={saveItem} submitLabel={item ? "Save item details" : "Create supply item"}>
     {item && <input type="hidden" name="item_id" value={item.id}/>}
     <div className="sys-form-grid">
       <Field label="Supply name" wide><input className="sys-input" name="name" required maxLength={160} defaultValue={item?.name} placeholder="e.g. Scantron answer sheets"/></Field>
-      <Field label="Barcode / stock code (SKU)" hint="Use a unique code, or scan a product barcode here. Printed labels use this value; reprint them if it changes."><input className="sys-input" name="sku" required maxLength={80} defaultValue={item?.sku} placeholder="e.g. SUP-001 or 4801234567890"/></Field>
-      <Field label="Category"><input className="sys-input" name="category" required maxLength={80} defaultValue={item?.category || "General supplies"} list="supply-categories"/><datalist id="supply-categories"><option value="Uniform"/><option value="General supplies"/><option value="Office supplies"/><option value="Paper products"/><option value="Scantron"/><option value="Cleaning supplies"/><option value="Equipment"/></datalist><small>Publicly displayed supplies share one QR code per category on the home page.</small></Field>
+      <Field label="Barcode / stock code (SKU)" hint={item ? "Printed labels use this code; reprint them if it changes." : "A default code is provided. Keep it, enter your own, or replace it with a scanned product barcode. Print its label after saving."}><input className="sys-input" name="sku" required maxLength={80} value={code} onChange={event => setCode(event.target.value)} placeholder="e.g. SUP-001 or 4801234567890"/></Field>
+      <Field label="Category" hint="Enter any category name. Use the same name to group supplies under one QR code; different names get separate QR codes on the landing page."><input className="sys-input" name="category" required maxLength={80} defaultValue={item?.category ?? ""} placeholder="e.g. Lab materials or Sports supplies" autoComplete="off"/></Field>
       <Field label="Unit" hint="The unit used for counting stock."><input className="sys-input" name="unit" required maxLength={40} defaultValue={item?.unit || "piece"} placeholder="piece, box, ream"/></Field>
       <Field label="Storage location"><input className="sys-input" name="location" maxLength={160} defaultValue={item?.location} placeholder="e.g. Supplies office, shelf A"/></Field>
       <Field label="Low-stock alert level" hint="An alert appears when stock reaches this quantity."><input className="sys-input" name="low_stock_threshold" type="number" required min={0} max={1000000000} step={1} defaultValue={item?.low_stock_threshold ?? 10}/></Field>
       <Field label="Description" wide><textarea className="sys-input" name="description" rows={3} maxLength={2000} defaultValue={item?.description} placeholder="Specifications or notes about this supply"/></Field>
     </div>
-    {!item && <p className="sys-form-hint">New items start with zero stock. Record a stock-in transaction after creating the item.</p>}
+    {!item && <p className="sys-form-hint">New items start with zero stock. Record a stock-in transaction after creating the item. To display its category QR code on the landing page, open the item, choose Show on public list under Public stock list, and save the displayed quantity.</p>}
   </ActionForm>;
 }
 
@@ -126,6 +133,7 @@ export function PublicVisibilityForm({ action, item }: { action: FormAction; ite
   return <ActionForm action={action} submitLabel="Save public display" pendingLabel="Saving…">
     <input type="hidden" name="item_id" value={item.id}/>
     <Field label="Public visibility"><select className="sys-select" name="show_on_landing" defaultValue={String(item.show_on_landing)}><option value="false">Hidden from public list</option><option value="true">Show on public list</option></select></Field>
+    <p className="sys-form-hint">When shown publicly, this supply appears under <strong>{item.category}</strong> on the landing page. This category has its own QR code, shared by supplies with the same category name.</p>
     <Field label={`Displayed quantity (${item.unit})`} hint="Choose the maximum quantity visitors see. If actual stock falls below this amount, the lower stock count is shown. This does not change inventory."><input className="sys-input" name="public_quantity" type="number" required min={0} max={2147483647} step={1} defaultValue={item.public_quantity ?? 0}/></Field>
     <p className="sys-form-hint">Actual stock: {item.quantity} {item.unit}. Set the displayed quantity to 0 to show this item as out of stock.</p>
     {item.is_archived && <p className="sys-form-hint">Archived supplies remain hidden until restored.</p>}

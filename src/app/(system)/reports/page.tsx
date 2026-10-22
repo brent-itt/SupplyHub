@@ -1,33 +1,28 @@
 import Form from "next/form";
 import Link from "next/link";
 import { PrintButton } from "@/components/system/print-button";
-import { EmptyState, PageHeading, Pagination, StatCard } from "@/components/system/ui";
+import { EmptyState, ErrorNotice, PageHeading, Pagination, StatCard } from "@/components/system/ui";
 import { formatDate, formatNumber, movementLabels } from "@/lib/format";
 import { requireProfile } from "@/lib/auth";
 import type { InventoryTransaction, Item } from "@/lib/types";
 import { pageNumber } from "@/lib/validation";
+import { reportDateRange } from "@/lib/report-dates";
 
 type ReportItem = Pick<Item, "id" | "name" | "sku" | "category" | "unit" | "quantity" | "low_stock_threshold" | "is_archived">;
 type ReportTransaction = Pick<InventoryTransaction, "id" | "item_id" | "kind" | "quantity_delta" | "balance_after" | "note" | "reference" | "created_at"> & { item: Pick<Item, "name" | "sku" | "unit"> | null };
-
-function validDate(value: unknown) {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00.000Z`)) ? value : "";
-}
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { supabase } = await requireProfile(["admin", "super_admin"], "/reports");
   const query = await searchParams;
   const referenceDate = new Date();
-  const today = referenceDate.toISOString().slice(0, 10);
-  const firstDay = new Date(referenceDate);
-  firstDay.setDate(firstDay.getDate() - 29);
-  const defaultFrom = firstDay.toISOString().slice(0, 10);
-  const from = validDate(query.from) || defaultFrom;
-  const to = validDate(query.to) || today;
+  let dates;
+  try { dates = reportDateRange(query.from, query.to, referenceDate); }
+  catch {
+    return <><PageHeading eyebrow="SUPPLIES OFFICE" title="Inventory reports" description="Choose a valid date range."/><ErrorNotice message="Enter valid dates with From on or before To."/><Link className="sys-link" href="/reports">Reset report dates</Link></>;
+  }
+  const { from, to, start, end } = dates;
   const page = pageNumber(query.page);
   const stockPage = pageNumber(query.stock_page);
-  const start = `${from}T00:00:00.000Z`;
-  const end = `${to}T23:59:59.999Z`;
   async function loadItems() {
     const items: ReportItem[] = [];
     for (let offset = 0; ; offset += 1000) {
@@ -57,6 +52,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return <>
     <PageHeading eyebrow="SUPPLIES OFFICE" title="Inventory reports" description="Review current stock and the transaction ledger for a selected date range." actions={<><Link className="sys-button sys-button-secondary sys-no-print" href={`/api/reports?${reportQuery}`}>Download CSV</Link><PrintButton label="Print current page"/></>}/>
+    <div className="analytics-report-heading"><p>Transaction period: {from} to {to} · Philippine time</p><p>Current inventory snapshot: <time dateTime={referenceDate.toISOString()}>{formatDate(referenceDate.toISOString())}</time> · Philippine time</p><p>Printed tables include stock page {stockPage} and transaction page {page}.</p></div>
     <Form key={`${from}:${to}`} className="sys-toolbar sys-filters sys-no-print" action="/reports" aria-label="Report date range">
       <label className="sys-field"><span>From</span><input className="sys-input" type="date" name="from" defaultValue={from}/></label>
       <label className="sys-field"><span>To</span><input className="sys-input" type="date" name="to" defaultValue={to}/></label>

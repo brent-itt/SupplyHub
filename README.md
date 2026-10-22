@@ -54,6 +54,8 @@ On a new machine, run `vercel login` and `vercel link --project supalies --scope
 
 ## Features
 
+See the [11-point feature checklist](docs/feature-checklist.md) for where to use each feature and the deployment steps. New supplies receive an editable default barcode, student category-stock pages refresh every 30 seconds, and Overview includes **Print analytics** with dates. Notifications remain staff-triggered from VIP Queue.
+
 - Every active account has dashboard analytics that refresh every 15 seconds while the tab is visible, with manual refresh, last-updated time, and offline status. Stock health covers shared inventory; staff see their own requests and transactions, while Admins and Super Admins see overall activity. Seven-day stock movement uses Philippine calendar dates. Staff transaction analytics require the existing server-only `SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`); queries are restricted to the signed-in staff member and exclude transaction notes and references. No database migration is needed.
 
 - The home page shows one QR code per category containing publicly selected supplies. Scan a code to visit `/stock?category=Uniform` (or another category); only that category's public supplies and capped display quantities appear. Category cards have no view or download buttons and the QR images are not clickable. Set each item's **Category** and public visibility in Inventory. Set `NEXT_PUBLIC_SITE_URL` to the published HTTPS address for QR codes shared with students. No additional database migration is needed.

@@ -4,7 +4,9 @@ import { formatNumber } from "@/lib/format";
 import { requireProfile } from "@/lib/auth";
 import { isManager } from "@/lib/types";
 import { pageNumber, searchTerm } from "@/lib/validation";
-import { EmptyState, PageHeading, StockBadge } from "@/components/system/ui";
+import { loadInventoryVipNeeds, newCustomerStock } from "@/lib/inventory-stock";
+import { DataRefresh } from "@/components/data-refresh";
+import { EmptyState, ErrorNotice, PageHeading, StockBadge } from "@/components/system/ui";
 
 const pageSize = 25;
 
@@ -18,7 +20,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const { supabase, profile } = await requireProfile();
   const query = await searchParams;
   const term = searchTerm(query.q);
-  const category = typeof query.category === "string" ? searchTerm(query.category) : "";
+  const category = typeof query.category === "string" ? query.category.trim().slice(0, 80) : "";
   const archived = isManager(profile.role) && query.archived === "true";
   const canEditQuantity = isManager(profile.role);
   const page = pageNumber(query.page);
@@ -29,6 +31,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const { data, count, error } = await request;
   if (error) throw new Error("Unable to load the inventory.");
   const items = data ?? [];
+  const vipNeeds = await loadInventoryVipNeeds(supabase, items.map(item => item.id));
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / pageSize));
   const queryForLinks: Record<string, string> = {};
   if (term) queryForLinks.q = term;
@@ -37,15 +40,30 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
 
   return <>
     <PageHeading eyebrow="SUPPLIES OFFICE" title={archived ? "Archived supplies" : "Inventory"} description="Search supplies, review stock levels, and open an item to view or manage its record." actions={<>{!archived && <Link className="sys-button sys-button-secondary" href="/scan">Stock out supplies</Link>}{isManager(profile.role) && <Link className="sys-button" href="/inventory/new">Add supply item</Link>}{isManager(profile.role) && <Link className="sys-button sys-button-secondary" href={archived ? "/inventory" : "/inventory?archived=true"}>{archived ? "Active inventory" : "Archived supplies"}</Link>}</>}/>
+    <DataRefresh updatedAt={vipNeeds === null ? null : new Date().toISOString()} subject="inventory" intervalMs={30000}/>
+    {vipNeeds === null && <ErrorNotice message="Unable to check VIP stock needs. Availability for new customers is unavailable until you refresh successfully."/>}
     <section className="sys-card sys-card-flush" aria-label="Supply items">
-      <div className="sys-card-header"><div><h2>{count ?? items.length} {archived ? "archived" : "available"} supply records</h2><p>Stock quantities update when a transaction is recorded.</p></div></div>
+      <div className="sys-card-header"><div><h2>{count ?? items.length} {archived ? "archived" : "active"} supply records</h2><p>For new customers = current stock minus uncollected VIP needs, with a minimum of zero. Stock status reflects this remaining quantity.</p></div></div>
       <Form className="sys-toolbar inventory-filters" action="/inventory">
         <label className="sys-field inventory-search"><span>Search supplies</span><input className="sys-input" name="q" defaultValue={term} placeholder="Search name, code, or description"/></label>
         {archived && <input type="hidden" name="archived" value="true"/>}
         <label className="sys-field"><span>Category</span><input className="sys-input" name="category" defaultValue={category} placeholder="All categories" maxLength={80}/></label>
         <button className="sys-button sys-button-secondary" type="submit">Apply filters</button>
       </Form>
-      {items.length ? <div className="sys-table-wrap"><table className="sys-table"><thead><tr><th>Supply</th><th>Category</th><th>Available</th><th>Stock status</th><th>Location</th>{canEditQuantity && !archived && <th>Actions</th>}</tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><Link className="sys-link" href={`/inventory/${item.id}`}>{item.name}</Link><small>{item.sku}</small></td><td>{item.category}</td><td className="sys-numeric">{formatNumber(item.quantity)} {item.unit}</td><td><StockBadge item={item}/></td><td>{item.location || "—"}</td>{canEditQuantity && !archived && <td><Link className="sys-button sys-button-secondary sys-button-small" href={`/inventory/${item.id}?movement=adjustment#stock-movement`} aria-label={`Edit quantity for ${item.name}`}>Edit quantity</Link></td>}</tr>)}</tbody></table></div> : <EmptyState title="No supplies found" description={term || category ? "Try changing your search or category filter." : archived ? "Archived supplies will appear here." : "The inventory is empty. Supplies Office staff can add the first item."} action={isManager(profile.role) && !archived ? <Link className="sys-button" href="/inventory/new">Add supply item</Link> : undefined}/>}
+      {items.length ? <div className="sys-table-wrap"><table className="sys-table"><thead><tr><th>Supply</th><th>Category</th><th>Current stock</th><th>VIP needed</th><th>For new customers</th><th>Stock status</th><th>Location</th>{canEditQuantity && !archived && <th>Actions</th>}</tr></thead><tbody>{items.map((item) => {
+        const needed = vipNeeds?.get(item.id) ?? 0;
+        const remaining = item.is_archived ? 0 : newCustomerStock(item.quantity, needed);
+        return <tr key={item.id}>
+          <td><Link className="sys-link" href={`/inventory/${item.id}`}>{item.name}</Link><small>{item.sku}</small></td>
+          <td>{item.category}</td>
+          <td className="sys-numeric">{formatNumber(item.quantity)} {item.unit}</td>
+          <td className="sys-numeric">{vipNeeds === null ? "Unavailable" : <>{formatNumber(needed)} {item.unit}{needed > item.quantity && <small>{formatNumber(needed - item.quantity)} more needed for VIP</small>}</>}</td>
+          <td className="sys-numeric">{vipNeeds === null ? "Unavailable" : <strong>{formatNumber(remaining)} {item.unit}</strong>}</td>
+          <td>{vipNeeds === null ? <span className="sys-badge sys-badge-neutral">Unknown</span> : <StockBadge item={{ ...item, quantity: remaining }}/>}</td>
+          <td>{item.location || "—"}</td>
+          {canEditQuantity && !archived && <td><Link className="sys-button sys-button-secondary sys-button-small" href={`/inventory/${item.id}?movement=adjustment#stock-movement`} aria-label={`Edit quantity for ${item.name}`}>Edit quantity</Link></td>}
+        </tr>;
+      })}</tbody></table></div> : <EmptyState title="No supplies found" description={term || category ? "Try changing your search or category filter." : archived ? "Archived supplies will appear here." : "The inventory is empty. Supplies Office staff can add the first item."} action={isManager(profile.role) && !archived ? <Link className="sys-button" href="/inventory/new">Add supply item</Link> : undefined}/>}
       {totalPages > 1 && <nav className="sys-pagination" aria-label="Inventory pages"><span>Page {page} of {totalPages}</span><div>{page > 1 && <Link className="sys-button sys-button-secondary sys-button-small" href={inventoryHref(queryForLinks, page - 1)}>Previous</Link>}{page < totalPages && <Link className="sys-button sys-button-secondary sys-button-small" href={inventoryHref(queryForLinks, page + 1)}>Next</Link>}</div></nav>}
     </section>
   </>;

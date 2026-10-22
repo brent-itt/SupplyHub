@@ -1,10 +1,10 @@
 import Image from "next/image";
 import { headers } from "next/headers";
-import { loadPublicStock } from "@/lib/public-stock";
+import { loadPublicStockCategories } from "@/lib/public-stock";
 import { publicStockCategories, stockCategoryQR, stockCategorySite } from "@/lib/stock-category";
 
 export async function PublicStockCategories() {
-  const { stocks, error } = await loadPublicStock();
+  const { stocks, error } = await loadPublicStockCategories();
   if (error) return <p className="public-stock-empty" role="status">Supply categories could not be loaded. Please try again shortly.</p>;
   const categories = publicStockCategories(stocks);
   if (!categories.length) return <p className="public-stock-empty">No supplies are currently selected for public display.</p>;

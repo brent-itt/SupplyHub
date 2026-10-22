@@ -17,7 +17,7 @@ export const itemSchema = z.object({
   sku: text(80).min(1, "A stock code is required.").regex(/^[a-zA-Z0-9._-]+$/, "Use letters, numbers, dots, hyphens, or underscores for the stock code."),
   name: text(160).min(1, "An item name is required."),
   description: text(2000),
-  category: text(80).min(1, "Choose a category."),
+  category: text(80).min(1, "Enter a category name."),
   unit: text(40).min(1, "Enter a unit."),
   location: text(160),
   low_stock_threshold: nonnegativeInteger,

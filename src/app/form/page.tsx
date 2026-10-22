@@ -14,14 +14,18 @@ export default async function StudentFormPage() {
   const items: StudentFormItem[] = [];
   let available = !!admin;
   if (admin) {
-    const { error } = await admin.from("student_stock_out_logs").select("id,student_email,fulfilled_quantity,vip_queued_at").limit(0);
-    available = !error;
-    for (let from = 0; ; from += 1000) {
-      const { data, error: itemError } = await admin.from("items").select("id,name,sku,unit").eq("is_archived", false).order("name").order("id").range(from, from + 999);
-      if (itemError) { available = false; break; }
-      items.push(...data);
-      if (data.length < 1000) break;
-    }
+    const [schemaResult, itemsAvailable] = await Promise.all([
+      admin.from("student_stock_out_logs").select("id,student_email,fulfilled_quantity,vip_queued_at").limit(0),
+      (async () => {
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await admin.from("items").select("id,name,sku,unit").eq("is_archived", false).order("name").order("id").range(from, from + 999);
+          if (error) return false;
+          items.push(...data);
+          if (data.length < 1000) return true;
+        }
+      })(),
+    ]);
+    available = !schemaResult.error && itemsAvailable;
   }
   return <div className="sys-public-page student-form-page">
     <PublicHeader/>

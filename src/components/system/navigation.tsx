@@ -15,6 +15,7 @@ function NavigationStatus({ active }: { active: boolean }) {
 
 function NavigationLink({ href, label, icon, active }: { href: string; label: string; icon: IconName; active: boolean }) {
   const [prefetch, setPrefetch] = useState(false);
+  // Fetch the full dynamic route on intent, without loading every page on entry.
   const prepareNavigation = () => setPrefetch(true);
 
   return <Link

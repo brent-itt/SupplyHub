@@ -3,7 +3,8 @@ import { formatDate, formatNumber, movementLabels } from "@/lib/format";
 import { requireProfile } from "@/lib/auth";
 import { isManager, type Item, type Requisition, type RequestStatus } from "@/lib/types";
 import { EmptyState, PageHeading, StatCard, StockBadge, StatusBadge } from "@/components/system/ui";
-import { DashboardRefresh } from "@/components/dashboard-refresh";
+import { DataRefresh } from "@/components/data-refresh";
+import { PrintButton } from "@/components/system/print-button";
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { analyticsWindow, movementTrend, stockHealth } from "@/lib/dashboard-analytics";
 import { loadDashboardTransactions } from "@/lib/dashboard-transactions";
@@ -43,8 +44,9 @@ export default async function DashboardPage() {
   const recentTransactions = (transactions ?? []).slice(0, 8);
 
   return <>
-    <PageHeading eyebrow="SUPPLIES OFFICE" title={`Good day, ${profile.full_name.split(/\s+/)[0] || "there"}`} description="A current view of university supplies and stock availability." actions={<Link className="sys-button sys-button-secondary" href="/inventory">Browse inventory</Link>}/>
-    <DashboardRefresh updatedAt={now.toISOString()}/>
+    <PageHeading eyebrow="SUPPLIES OFFICE" title={`Good day, ${profile.full_name.split(/\s+/)[0] || "there"}`} description="A current view of university supplies and stock availability." actions={<><Link className="sys-button sys-button-secondary" href="/inventory">Browse inventory</Link><PrintButton label="Print analytics"/></>}/>
+    <div className="analytics-report-heading"><h2>SupplyHub analytics</h2><p>Stock movement: {window.days[0]} to {window.days[window.days.length - 1]} · Philippine time</p><p>Inventory and request status as of <time dateTime={now.toISOString()}>{formatDate(now.toISOString())}</time> · Prepared for {profile.full_name || profile.email}</p></div>
+    <DataRefresh updatedAt={now.toISOString()}/>
     <p className="sys-muted">{manager ? "Showing activity across all accounts." : "Stock levels are shared. Request and transaction analytics show your own activity."}</p>
     <section className="sys-stat-grid" aria-label="Inventory summary">
       <StatCard label="Active supplies" value={activeItems.length} detail="Unique items in inventory" icon="inventory"/>

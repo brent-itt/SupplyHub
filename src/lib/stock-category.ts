@@ -2,7 +2,7 @@ import bwipjs from "bwip-js/node";
 
 export type PublicStockItem = { id: string; name: string; category: string; unit: string; quantity: number };
 
-export function publicStockCategories(stocks: PublicStockItem[]) {
+export function publicStockCategories<T extends Pick<PublicStockItem, "category">>(stocks: T[]) {
   return [...new Set(stocks.map(item => item.category))].sort((a, b) => a.localeCompare(b));
 }
 

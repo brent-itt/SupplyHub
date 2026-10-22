@@ -1,5 +1,7 @@
 # Database setup
 
+Apply `migrations/202610190001_server_read_grants.sql` after the earlier migrations. It explicitly grants server-side reads of `items` and `transactions` for the student form and staff analytics, so fresh databases work without automatic Supabase table grants. It is safe to rerun and does not grant anonymous access or direct stock writes.
+
 1. Create a Supabase project and open **SQL Editor**.
 2. Apply all files in `migrations` in timestamp order, including `202610040001_staff_stock_out.sql` (direct Staff stock out), `202610040002_school_staff_requisitions.sql` (revised school staff requisitions), and `202610040003_requisition_edits_and_logs.sql` (pending edits and admin activity logs). Receiving stock and count adjustments remain restricted to Admin and Super Admin. Existing Student profiles become inactive Staff profiles.
 3. In **Authentication > Providers > Email**, disable public sign-ups. Create authorized university accounts in **Authentication > Users > Add user**. If you use invitations, configure the app URL and redirect allow list in **Authentication > URL Configuration**. The application uses password sign-in, so each account needs a password.

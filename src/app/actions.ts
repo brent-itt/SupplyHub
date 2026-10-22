@@ -153,6 +153,8 @@ export async function saveItemAction(_previous: ActionResult, data: FormData): P
     return item_id ? "Supply details saved." : "Supply item created. Record its opening stock when ready.";
   });
   if (result.success) {
+    revalidatePath("/");
+    revalidatePath("/stock");
     revalidatePath("/dashboard");
     revalidatePath("/inventory");
     if (parsed.data.item_id) revalidatePath(`/inventory/${parsed.data.item_id}`);
@@ -208,6 +210,7 @@ export async function setPublicVisibilityAction(_previous: ActionResult, data: F
   });
   if (result.success) {
     revalidatePath("/");
+    revalidatePath("/stock");
     revalidatePath("/inventory");
     revalidatePath(`/inventory/${parsed.data.item_id}`);
   }

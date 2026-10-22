@@ -36,6 +36,43 @@ export function BarcodeScanner({ onScan, disabled }: { onScan: (value: string) =
   const [code, setCode] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (disabled || status !== "idle") return;
+
+    function isEditing(target: EventTarget | null) {
+      return target instanceof HTMLElement && (
+        target.isContentEditable || !!target.closest('input, textarea, select, [role="textbox"], [role="combobox"]')
+      );
+    }
+
+    function focusWhenReady() {
+      if (!document.activeElement || document.activeElement === document.body) {
+        inputRef.current?.focus({ preventScroll: true });
+      }
+    }
+
+    function captureScan(event: KeyboardEvent) {
+      // USB readers type like a keyboard. Route the first character into the
+      // barcode field even after clicking the page or a catalog button.
+      // Leave receipt fields, search, keyboard shortcuts, and IME input alone.
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.isComposing || event.repeat || isEditing(event.target)) return;
+      if (!/^[a-zA-Z0-9._-]$/.test(event.key)) return;
+      const input = inputRef.current;
+      if (!input || input.disabled) return;
+      event.preventDefault();
+      input.focus({ preventScroll: true });
+      setCode(event.key);
+    }
+
+    focusWhenReady();
+    document.addEventListener("keydown", captureScan);
+    window.addEventListener("focus", focusWhenReady);
+    return () => {
+      document.removeEventListener("keydown", captureScan);
+      window.removeEventListener("focus", focusWhenReady);
+    };
+  }, [disabled, status]);
+
   // Invalidating the session also cancels pending imports, permission requests,
   // and decode initialization: any late stream/controls are immediately stopped.
   const releaseCamera = useCallback(() => {
@@ -152,7 +189,7 @@ export function BarcodeScanner({ onScan, disabled }: { onScan: (value: string) =
 
   return (
     <section className="pos-scanner" aria-labelledby="scanner-title">
-      <div className="pos-scanner-heading"><span className="pos-scanner-icon"><Icon name="scan" size={25}/></span><div><h2 id="scanner-title">Scan a barcode</h2><p>Use a USB scanner, camera, or enter the stock code.</p></div><span className="sys-badge sys-badge-green">Stock out</span></div>
+      <div className="pos-scanner-heading"><span className="pos-scanner-icon"><Icon name="scan" size={25}/></span><div><h2 id="scanner-title">Scan a barcode</h2><p>USB scanner ready — scan without clicking the barcode field.</p></div><span className="sys-badge sys-badge-green">Stock out</span></div>
 
       <video
         ref={videoRef}
@@ -214,7 +251,7 @@ export function BarcodeScanner({ onScan, disabled }: { onScan: (value: string) =
         </label>
         <button type="submit" className="sys-button" disabled={disabled || status !== "idle"}><Icon name="plus" size={17}/> Add item</button>
       </form>
-      <p className="sys-form-hint" id="item-code-hint">Each scan adds one unit to the cart. Stock updates when you confirm stock out.</p>
+      <p className="sys-form-hint" id="item-code-hint">Keep this page active and set your scanner to send Enter after each barcode. While editing another field, finish and click outside it to resume scanning. Stock updates when you confirm stock out.</p>
     </section>
   );
 }
