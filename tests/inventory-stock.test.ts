@@ -14,16 +14,18 @@ test("inventory totals all VIP balance pages and only requests the displayed ite
   const offsets: number[] = [];
   const supabase = client(async (input) => {
     const url = new URL(String(input));
-    assert.equal(url.pathname, "/rest/v1/student_vip_queue");
-    assert.equal(url.searchParams.get("select"), "item_id,remaining_quantity");
+    assert.equal(url.pathname, "/rest/v1/student_stock_out_logs");
+    assert.equal(url.searchParams.get("select"), "item_id,quantity,fulfilled_quantity");
+    assert.equal(url.searchParams.get("status"), "eq.pending");
+    assert.equal(url.searchParams.get("vip_queued_at"), "not.is.null");
     assert.equal(url.searchParams.get("item_id"), "in.(item-a,item-b)");
     assert.equal(url.searchParams.get("order"), "id.asc");
     assert.equal(url.searchParams.get("limit"), "500");
     const offset = Number(url.searchParams.get("offset"));
     offsets.push(offset);
     return Response.json(offset < 1000
-      ? Array.from({ length: 500 }, () => ({ item_id: "item-a", remaining_quantity: 2 }))
-      : [{ item_id: "item-a", remaining_quantity: 7 }, { item_id: "item-b", remaining_quantity: 3 }]);
+      ? Array.from({ length: 500 }, () => ({ item_id: "item-a", quantity: 5, fulfilled_quantity: 3 }))
+      : [{ item_id: "item-a", quantity: 10, fulfilled_quantity: 3 }, { item_id: "item-b", quantity: 3, fulfilled_quantity: 0 }]);
   });
   const needs = await loadInventoryVipNeeds(supabase, ["item-a", "item-b"]);
   assert.deepEqual(offsets, [0, 500, 1000]);
@@ -34,7 +36,7 @@ test("failed later queue pages discard partial totals instead of overstating ava
   const supabase = client(async (input) => {
     const offset = Number(new URL(String(input)).searchParams.get("offset"));
     return offset === 0
-      ? Response.json(Array.from({ length: 500 }, () => ({ item_id: "item-a", remaining_quantity: 1 })))
+      ? Response.json(Array.from({ length: 500 }, () => ({ item_id: "item-a", quantity: 2, fulfilled_quantity: 1 })))
       : Response.json({ code: "42501", message: "Permission denied" }, { status: 403 });
   });
   assert.equal(await loadInventoryVipNeeds(supabase, ["item-a"]), null);

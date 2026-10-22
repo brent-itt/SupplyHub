@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/format";
 
-export function DataRefresh({ updatedAt, subject = "dashboard", intervalMs = 15000 }: { updatedAt: string | null; subject?: string; intervalMs?: number }) {
+export function DataRefresh({ updatedAt, subject = "dashboard", intervalMs = 30000 }: { updatedAt: string | null; subject?: string; intervalMs?: number }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const busy = useRef(false);

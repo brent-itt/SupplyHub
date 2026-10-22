@@ -39,7 +39,17 @@ test("VIP collections preserve partial balances, FIFO reservations, privacy, ret
     await db.exec(await readFile(new URL("202610150004_vip_queue_positions.sql", dir), "utf8"));
     const log = async (id: string) => (await db.query<Record<string, unknown>>("select * from public.student_stock_out_logs where id=$1", [id])).rows[0];
     const stock = async () => (await db.query<{ quantity: number }>("select quantity from public.items where id=$1", [item])).rows[0].quantity;
-    const queue = () => asRole("authenticated", admin, "select * from public.student_vip_queue order by created_at,id");
+    const queue = async () => {
+      const rows = await asRole("authenticated", admin, "select * from public.student_vip_queue order by created_at,id");
+      const balances = await asRole("authenticated", admin, `
+        select id,item_id,quantity-fulfilled_quantity as remaining_quantity
+        from public.student_stock_out_logs
+        where status='pending' and vip_queued_at is not null order by created_at,id
+      `);
+      assert.deepEqual(balances, rows.map(({ id, item_id, remaining_quantity }) => ({ id, item_id, remaining_quantity })),
+        "Inventory's direct balance query matches the ranked queue after every collection, rejection, and stock change");
+      return rows;
+    };
     assert.equal((await log(historical)).fulfilled_quantity, 1);
     assert.equal((await log(historical)).student_email, null);
     assert.equal((await queue())[0].id, oldWaiting, "Existing shortages enter VIP Queue");
@@ -70,7 +80,9 @@ test("VIP collections preserve partial balances, FIFO reservations, privacy, ret
     await assert.rejects(collect(first, 4), /insufficient stock/i);
     await assert.rejects(move(1, "stock_out"), /VIP/i);
     await assert.rejects(asRole("anon", null, "select * from public.student_vip_queue"), /permission/i);
+    await assert.rejects(asRole("anon", null, "select item_id,quantity,fulfilled_quantity from public.student_stock_out_logs"), /permission/i);
     assert.equal((await asRole("authenticated", inactive, "select * from public.student_vip_queue")).length, 0);
+    assert.equal((await asRole("authenticated", inactive, "select item_id,quantity,fulfilled_quantity from public.student_stock_out_logs")).length, 0);
     await assert.rejects(asRole("authenticated", staff, "update public.student_stock_out_logs set fulfilled_quantity=10 where id=$1", [first]), /permission/i);
     await assert.rejects(asRole("authenticated", staff, "select public.student_reserved_quantity($1)", [item]), /permission/i);
 
